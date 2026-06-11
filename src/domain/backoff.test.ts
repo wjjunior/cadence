@@ -52,8 +52,16 @@ describe('backoffDelay', () => {
     expect(() => backoffDelay(1.5, BASE, CAP, 0)).toThrow(RangeError);
   });
 
-  it('should reject a rand outside [0, 1)', () => {
+  it('should reject a rand outside [0, 1) or NaN', () => {
     expect(() => backoffDelay(0, BASE, CAP, -0.1)).toThrow(RangeError);
     expect(() => backoffDelay(0, BASE, CAP, 1)).toThrow(RangeError);
+    expect(() => backoffDelay(0, BASE, CAP, Number.NaN)).toThrow(RangeError);
+  });
+
+  it('should reject a non-finite or negative baseMs or capMs', () => {
+    expect(() => backoffDelay(0, -1, CAP, 0)).toThrow(RangeError);
+    expect(() => backoffDelay(0, BASE, -1, 0)).toThrow(RangeError);
+    expect(() => backoffDelay(0, Number.NaN, CAP, 0)).toThrow(RangeError);
+    expect(() => backoffDelay(0, BASE, Number.POSITIVE_INFINITY, 0)).toThrow(RangeError);
   });
 });
