@@ -184,7 +184,19 @@ Every external integration (the postgres.js driver, Twilio SDK, the simulated/re
 
 ### 15. Code speaks for itself; comments are rare exceptions
 
-Default to zero JSDoc and zero inline comments. Names and test descriptions carry the spec. Comments are reserved for the narrow case where the reader would not derive the meaning in 5 seconds **and** the information is about *why* (a constraint, a non-obvious quirk — e.g. "zero rows is the duplicate signal", "60 s = 4× worst-case processing"), not *what*. Design rationale lives in ARCHITECTURE.md and the Notion design, not in code comments.
+**The default is ZERO comments.** Names, types, and test descriptions carry the spec. Writing a comment is the exception you must justify, not the norm — when in doubt, delete it. A file with no comments is the expected, healthy state.
+
+A comment earns its place only when **both** hold: the reader could not recover the meaning from the code in 5 seconds, **and** it explains *why* (a constraint, a non-obvious consequence, a decision that prevents a real mistake) — never *what* the code does. Apply the **delete test**: if removing the comment loses nothing a competent reader couldn't recover from the code, delete it. Keep the survivors to one line.
+
+These are all banned — they restate the code or belong elsewhere:
+
+- **Tag markers** echoing the signature: `// tx1`, `// read`, `// tx2`, `// status = received`. The parameter (`tx: Tx`) or the name already says it.
+- **File/role headers**: `// Output contracts of the read use cases, serialized by http`. The folder and layer say it.
+- **Field/line restatements**: `// message text (may be empty)` on `z.string()`, `// user phone` on `from`.
+- **Rule citations**: `// single source of truth (rule 3)`. The code shows it; the rule lives here.
+- **JSDoc `/** @param ... @returns ... */`** templates on anything.
+
+Design rationale and cross-cutting context belong in ARCHITECTURE.md / the design doc / the PR description, not scattered through code. Good *why* comments are rare and load-bearing — e.g. "zero rows is the duplicate signal", "60 s = 4× worst-case processing", "claim already incremented attempts (§5.1)".
 
 ### 16. Domain layer is pure
 
