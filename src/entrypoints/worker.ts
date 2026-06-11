@@ -63,8 +63,6 @@ async function main(): Promise<void> {
       );
   }, config.METRICS_POLL_MS);
 
-  await runtime.start();
-
   let shuttingDown = false;
   const shutdown = (): void => {
     if (shuttingDown) return;
@@ -75,7 +73,11 @@ async function main(): Promise<void> {
       .finally(() => sql.end())
       .catch(() => {});
   };
+  // Registered before start() so a signal during startup still triggers a clean
+  // shutdown (stop() on a not-yet-started runtime is a safe no-op).
   for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, shutdown);
+
+  await runtime.start();
 }
 
 main().catch((error) => {
