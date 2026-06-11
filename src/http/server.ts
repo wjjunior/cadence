@@ -1,6 +1,8 @@
 import formbody from '@fastify/formbody';
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 
+import { errorResponse } from '../application/contracts/error-response.js';
 import { type ConfigRoutesDeps, registerConfigRoutes } from './routes/config.js';
 import { type ConversationRoutesDeps, registerConversationRoutes } from './routes/conversations.js';
 import { type EventRoutesDeps, registerEventRoutes } from './routes/events.js';
@@ -19,7 +21,24 @@ export type ServerDeps = ConversationRoutesDeps &
     // Trust X-Forwarded-* so the Twilio signature URL reflects the external scheme/host
     // (only behind a known proxy; off by default).
     trustProxy?: boolean;
+    // Absolute path to the built admin SPA; when set, the API also serves it (one-command stack).
+    adminDir?: string;
   };
+
+const API_PREFIXES = ['/api', '/dev', '/health', '/webhooks'];
+
+// Serve the built SPA: real files (index.html, /assets/*) are served by @fastify/static; any other
+// GET that isn't an API path falls back to index.html so client-side routes (/c/:id) and refreshes
+// resolve. Unknown API paths stay a JSON 404, never the SPA HTML.
+function registerAdminSpa(app: FastifyInstance, adminDir: string): void {
+  app.register(fastifyStatic, { root: adminDir, wildcard: false });
+  app.setNotFoundHandler((request, reply) => {
+    if (request.method === 'GET' && !API_PREFIXES.some((prefix) => request.url.startsWith(prefix))) {
+      return reply.type('text/html').sendFile('index.html');
+    }
+    return reply.code(404).send(errorResponse('not found'));
+  });
+}
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
   // SSE connections are long-lived and hijacked; without forceClose, app.close() would block on
@@ -38,5 +57,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerHealthRoutes(app, deps);
   registerConfigRoutes(app, deps);
   if (deps.simulate) registerSimulateRoutes(app, deps.simulate);
+  if (deps.adminDir) registerAdminSpa(app, deps.adminDir);
   return app;
 }

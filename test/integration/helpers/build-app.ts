@@ -23,7 +23,10 @@ export interface TestApp {
   heartbeats: DrizzleHeartbeatRepository;
 }
 
-export function buildTestApp(client: DbClient, opts: { simulate?: boolean } = {}): TestApp {
+export function buildTestApp(
+  client: DbClient,
+  opts: { simulate?: boolean; adminDir?: string } = {},
+): TestApp {
   const conversations = new DrizzleConversationRepository(client.db);
   const messages = new DrizzleMessageRepository(client.db);
   const ingestInboundMessage = new IngestInboundMessage(
@@ -45,6 +48,7 @@ export function buildTestApp(client: DbClient, opts: { simulate?: boolean } = {}
     healthRepository: new PgHealthRepository(client.sql),
     smsProvider: opts.simulate ? 'mock' : 'twilio',
     simulate: opts.simulate ? { ingestInboundMessage } : null,
+    adminDir: opts.adminDir,
   });
 
   return { app, heartbeats: new DrizzleHeartbeatRepository(client.db) };

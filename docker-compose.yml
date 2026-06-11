@@ -44,6 +44,7 @@ services:
       DATABASE_URL: postgresql://cadence:cadence@postgres:5432/cadence
       LOG_LEVEL: info
     # Loopback-only; mock SMS is the zero-config default, so no secrets here.
+    # Serves both the JSON/SSE API and the built admin UI at http://localhost:3000.
     ports:
       - '127.0.0.1:3000:3000'
     depends_on:

@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { IngestInboundMessage } from '../application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../application/use-cases/list-conversations.js';
@@ -41,12 +44,17 @@ async function main(): Promise<void> {
         ? new TwilioSignatureVerifier(config.TWILIO_AUTH_TOKEN)
         : undefined;
 
+    // Serve the built admin when it's present beside the compiled entrypoint (the image);
+    // absent in local tsx dev, where the admin runs via `vite dev`.
+    const adminDir = fileURLToPath(new URL('../../admin/dist', import.meta.url));
+
     const app = buildServer({
       listConversations: new ListConversations(conversations),
       getConversationDetail: new GetConversationDetail(conversations, messages),
       ingestInboundMessage,
       verifier,
       trustProxy: config.TRUST_PROXY,
+      adminDir: existsSync(adminDir) ? adminDir : undefined,
       eventBus,
       heartbeatMs: config.SSE_HEARTBEAT_MS,
       loggerInstance: logger,
