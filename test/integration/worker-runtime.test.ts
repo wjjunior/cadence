@@ -171,10 +171,36 @@ describe('WorkerRuntime LISTEN wake-up', () => {
     await runtime.start();
 
     const jobId = await seedPendingJob();
+    const startedAt = Date.now();
     await sql.notify('job_created', jobId);
 
     await waitFor(() => processed.includes(jobId), 2000);
+    const elapsedMs = Date.now() - startedAt;
     expect(processed).toContain(jobId);
+    // Notify-driven pickup: ~sub-100ms locally; the 60s poll cannot explain a
+    // pickup this fast. Bounded loosely here to stay robust on shared CI.
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+
+  it('should be idempotent when start is called twice (no duplicate runners)', async () => {
+    const { processed, processJob } = recorder();
+    runtime = new WorkerRuntime({
+      queue,
+      sql,
+      processJob,
+      concurrency: 2,
+      reconcilePollMs: 60_000,
+      workerId: 'w',
+    });
+    await runtime.start();
+    await runtime.start();
+
+    const jobId = await seedPendingJob();
+    await sql.notify('job_created', jobId);
+
+    await waitFor(() => processed.length >= 1, 2000);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(processed).toEqual([jobId]);
   });
 
   it('should process a single job once despite duplicate notifications', async () => {

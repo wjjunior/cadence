@@ -17,10 +17,11 @@ const noop = (): void => {};
 
 export class WorkerRuntime {
   private readonly onError: (error: unknown, job: Job | null) => void;
+  private running = false;
   private stopped = false;
   private runners: Promise<void>[] = [];
   private waiters: Array<() => void> = [];
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private listener: { unlisten: () => Promise<void> } | null = null;
 
   constructor(private readonly deps: WorkerRuntimeDeps) {
@@ -28,6 +29,8 @@ export class WorkerRuntime {
   }
 
   async start(): Promise<void> {
+    if (this.running) return;
+    this.running = true;
     this.stopped = false;
     // onNotify wakes for latency; onListen wakes on every (re)connect — the
     // reconciliation sweep that closes the NOTIFY-lost-while-disconnected gap.
@@ -36,7 +39,7 @@ export class WorkerRuntime {
       () => this.wake(),
       () => this.wake(),
     );
-    this.pollTimer = setInterval(() => void this.reconcile(), this.deps.reconcilePollMs);
+    this.scheduleReconcile();
     for (let i = 0; i < this.deps.concurrency; i++) {
       this.runners.push(this.runLoop(`${this.deps.workerId}-${i}`));
     }
@@ -44,8 +47,9 @@ export class WorkerRuntime {
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.running = false;
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
     if (this.listener) {
@@ -55,6 +59,16 @@ export class WorkerRuntime {
     this.wake();
     await Promise.all(this.runners);
     this.runners = [];
+  }
+
+  // Self-rescheduling so a reconcile that outlasts the interval can never overlap
+  // the next one (setInterval would).
+  private scheduleReconcile(): void {
+    this.pollTimer = setTimeout(() => {
+      void this.reconcile().finally(() => {
+        if (!this.stopped) this.scheduleReconcile();
+      });
+    }, this.deps.reconcilePollMs);
   }
 
   // The reconciliation poll tick: reclaim abandoned leases, then wake runners to
