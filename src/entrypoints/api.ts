@@ -19,46 +19,52 @@ async function main(): Promise<void> {
   const { sql, db } = createDbClient(config.DATABASE_URL);
   const conversations = new DrizzleConversationRepository(db);
   const messages = new DrizzleMessageRepository(db);
-
   const eventBus = new PgEventBus(sql);
-  await eventBus.start();
 
-  const ingestInboundMessage = new IngestInboundMessage(
-    new DrizzleUnitOfWork(db),
-    new DrizzleWebhookEventRepository(),
-    conversations,
-    messages,
-    new DrizzleJobEnqueuer(),
-    new PgNotifier(),
-    logger,
-  );
+  try {
+    await eventBus.start();
 
-  const app = buildServer({
-    listConversations: new ListConversations(conversations),
-    getConversationDetail: new GetConversationDetail(conversations, messages),
-    ingestInboundMessage,
-    eventBus,
-    heartbeatMs: config.SSE_HEARTBEAT_MS,
-    loggerInstance: logger,
-  });
+    const ingestInboundMessage = new IngestInboundMessage(
+      new DrizzleUnitOfWork(db),
+      new DrizzleWebhookEventRepository(),
+      conversations,
+      messages,
+      new DrizzleJobEnqueuer(),
+      new PgNotifier(),
+      logger,
+    );
 
-  app.addHook('onClose', async () => {
-    try {
-      await eventBus.close();
-    } finally {
-      await sql.end();
-    }
-  });
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.on(signal, () => {
-      void app.close();
+    const app = buildServer({
+      listConversations: new ListConversations(conversations),
+      getConversationDetail: new GetConversationDetail(conversations, messages),
+      ingestInboundMessage,
+      eventBus,
+      heartbeatMs: config.SSE_HEARTBEAT_MS,
+      loggerInstance: logger,
     });
-  }
 
-  await app.listen({ port: config.API_PORT, host: '0.0.0.0' });
-  process.stdout.write(
-    `${JSON.stringify({ service: 'api', event: 'listening', port: config.API_PORT })}\n`,
-  );
+    app.addHook('onClose', async () => {
+      try {
+        await eventBus.close();
+      } finally {
+        await sql.end();
+      }
+    });
+    for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+      process.on(signal, () => {
+        void app.close();
+      });
+    }
+
+    await app.listen({ port: config.API_PORT, host: '0.0.0.0' });
+    logger.info({ event: 'listening', port: config.API_PORT });
+  } catch (error) {
+    // Free the listen connection and db pool so a failed startup exits instead
+    // of hanging on open handles (the server's own onClose only runs post-listen).
+    await eventBus.close().catch(() => {});
+    await sql.end().catch(() => {});
+    throw error;
+  }
 }
 
 main().catch((error) => {
