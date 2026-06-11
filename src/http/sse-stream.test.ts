@@ -6,9 +6,11 @@ class FakeWritable implements SseWritable {
   chunks: string[] = [];
   destroyed = false;
   writeReturn = true;
+  throwOnWrite = false;
   private drainCb: (() => void) | null = null;
 
   write(chunk: string): boolean {
+    if (this.throwOnWrite) throw new Error('socket gone');
     this.chunks.push(chunk);
     return this.writeReturn;
   }
@@ -67,6 +69,17 @@ describe('SseStream', () => {
 
     for (let i = 0; i <= MAX_BUFFERED_EVENTS; i++) stream.comment();
 
+    expect(raw.destroyed).toBe(true);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('should drop itself when the underlying write throws', () => {
+    const raw = new FakeWritable();
+    const onClose = vi.fn();
+    const stream = new SseStream(raw, { onClose });
+    raw.throwOnWrite = true;
+
+    expect(() => stream.event('{"a":1}')).not.toThrow();
     expect(raw.destroyed).toBe(true);
     expect(onClose).toHaveBeenCalledTimes(1);
   });

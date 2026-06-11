@@ -37,12 +37,19 @@ export class SseStream {
 
   private writeFrame(frame: string): void {
     if (this.closed || this.raw.destroyed) return;
-    if (this.raw.write(frame)) return;
+
+    let flushed: boolean;
+    try {
+      flushed = this.raw.write(frame);
+    } catch {
+      this.dropSelf();
+      return;
+    }
+    if (flushed) return;
 
     this.pending += 1;
     if (this.pending > MAX_BUFFERED_EVENTS) {
-      this.raw.destroy();
-      this.close();
+      this.dropSelf();
       return;
     }
     if (this.backedUp) return;
@@ -51,5 +58,10 @@ export class SseStream {
       this.backedUp = false;
       this.pending = 0;
     });
+  }
+
+  private dropSelf(): void {
+    if (!this.raw.destroyed) this.raw.destroy();
+    this.close();
   }
 }

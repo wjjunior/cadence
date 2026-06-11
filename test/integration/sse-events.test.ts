@@ -162,6 +162,28 @@ describe('GET /api/events', () => {
     c.close();
   });
 
+  it('should close the server even while a client is still connected', async () => {
+    const conversations = new DrizzleConversationRepository(client.db);
+    const messages = new DrizzleMessageRepository(client.db);
+    const extra = buildServer({
+      listConversations: new ListConversations(conversations),
+      getConversationDetail: new GetConversationDetail(conversations, messages),
+      eventBus: bus,
+      heartbeatMs: HEARTBEAT_MS,
+    });
+    const addr = await extra.listen({ port: 0, host: '127.0.0.1' });
+    const c = new SseClient();
+    await c.connect(`${addr}/api/events`);
+    await c.waitFor(isHandshake);
+
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('app.close() hung with a client connected')), 2_000),
+    );
+    await Promise.race([extra.close(), timeout]);
+
+    c.close();
+  });
+
   it('should keep serving other clients after one disconnects', async () => {
     const a = new SseClient();
     const b = new SseClient();
