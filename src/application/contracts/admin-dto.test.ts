@@ -42,8 +42,8 @@ describe('ConversationSummary', () => {
     expect(ConversationSummary.parse(summary)).toEqual(summary);
   });
 
-  it('should allow a null lastMessageAt', () => {
-    expect(ConversationSummary.parse({ ...summary, lastMessageAt: null }).lastMessageAt).toBeNull();
+  it('should reject a null lastMessageAt (always set since the first message)', () => {
+    expect(() => ConversationSummary.parse({ ...summary, lastMessageAt: null })).toThrow();
   });
 });
 

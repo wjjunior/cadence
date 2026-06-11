@@ -8,6 +8,13 @@
       "when": 1781137901163,
       "tag": "0000_magenta_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781149149030,
+      "tag": "0001_handy_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }

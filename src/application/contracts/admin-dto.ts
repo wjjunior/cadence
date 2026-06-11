@@ -15,7 +15,7 @@ export const ConversationSummary = z.object({
   id: z.string(),
   userPhone: z.string(),
   systemPhone: z.string(),
-  lastMessageAt: z.iso.datetime().nullable(),
+  lastMessageAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
 });
 export type ConversationSummary = z.infer<typeof ConversationSummary>;
