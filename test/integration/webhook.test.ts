@@ -78,9 +78,17 @@ const form = (overrides: Record<string, string> = {}): string => {
   return new URLSearchParams(fields).toString();
 };
 
-async function messageCount(): Promise<number> {
-  const [row] = await sql<{ count: string }[]>`select count(*)::int as count from messages`;
-  return Number(row!.count);
+type Table = 'webhook_events' | 'conversations' | 'messages' | 'jobs';
+
+async function rowCount(table: Table): Promise<number> {
+  const [row] = await sql<{ count: number }[]>`select count(*)::int as count from ${sql(table)}`;
+  return row?.count ?? 0;
+}
+
+async function expectNothingPersisted(): Promise<void> {
+  for (const table of ['webhook_events', 'conversations', 'messages', 'jobs'] as const) {
+    expect(await rowCount(table)).toBe(0);
+  }
 }
 
 describe('POST /webhooks/twilio/sms', () => {
@@ -96,9 +104,8 @@ describe('POST /webhooks/twilio/sms', () => {
     expect(res.headers['content-type']).toContain('text/xml');
     expect(res.body).toBe('<Response/>');
 
-    expect(await messageCount()).toBe(1);
-    const [job] = await sql<{ count: string }[]>`select count(*)::int as count from jobs`;
-    expect(Number(job!.count)).toBe(1);
+    expect(await rowCount('messages')).toBe(1);
+    expect(await rowCount('jobs')).toBe(1);
   });
 
   it('should treat a redelivered MessageSid as a duplicate: identical ack, no new rows', async () => {
@@ -107,10 +114,12 @@ describe('POST /webhooks/twilio/sms', () => {
     const first = await app.inject({ method: 'POST', url: '/webhooks/twilio/sms', headers: FORM_HEADERS, payload });
     const second = await app.inject({ method: 'POST', url: '/webhooks/twilio/sms', headers: FORM_HEADERS, payload });
 
-    expect(first.body).toBe('<Response/>');
     expect(second.statusCode).toBe(200);
-    expect(second.body).toBe('<Response/>');
-    expect(await messageCount()).toBe(1);
+    expect(first.body).toBe('<Response/>');
+    expect(second.body).toBe(first.body);
+    expect(await rowCount('conversations')).toBe(1);
+    expect(await rowCount('messages')).toBe(1);
+    expect(await rowCount('jobs')).toBe(1);
   });
 
   it('should reject a malformed payload with 400 and persist nothing', async () => {
@@ -123,7 +132,7 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await messageCount()).toBe(0);
+    await expectNothingPersisted();
   });
 
   it('should reject a non-empty but malformed phone number with 400 and persist nothing', async () => {
@@ -136,6 +145,6 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await messageCount()).toBe(0);
+    await expectNothingPersisted();
   });
 });
