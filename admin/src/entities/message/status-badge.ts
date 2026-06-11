@@ -8,9 +8,9 @@ export interface StatusBadgeSpec {
   pulse: boolean;
 }
 
-// Appendix A.3 status → badge mapping. Pure so it can be exhaustively unit-tested
-// and so components carry no status logic (rule 8).
-const STATUS_BADGES: Record<MessageStatus, StatusBadgeSpec> = {
+// Appendix A.3 status → badge mapping, kept pure so it is exhaustively unit-testable
+// and components carry no status logic.
+const statusBadges: Record<MessageStatus, StatusBadgeSpec> = {
   received: { label: 'received', variant: 'neutral', pulse: false },
   queued: { label: 'queued', variant: 'neutral', pulse: false },
   processing: { label: 'processing', variant: 'progress', pulse: true },
@@ -21,5 +21,5 @@ const STATUS_BADGES: Record<MessageStatus, StatusBadgeSpec> = {
 };
 
 export function statusBadge(status: MessageStatus): StatusBadgeSpec {
-  return STATUS_BADGES[status];
+  return statusBadges[status];
 }
