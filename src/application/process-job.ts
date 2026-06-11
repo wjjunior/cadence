@@ -24,6 +24,8 @@ export interface ProcessJobSettings {
   random: () => number;
 }
 
+export class ProcessJobError extends Error {}
+
 // sending is transient: persist only the endpoint, but route through the domain machine so an
 // illegal target throws rather than being written.
 function walkOutbound(end: OutboundStatus): OutboundStatus {
@@ -47,14 +49,14 @@ export class ProcessJob {
 
   async execute(job: Job): Promise<void> {
     const workerId = job.lockedBy;
-    if (!workerId) throw new Error(`job ${job.id} has no lease owner`);
+    if (!workerId) throw new ProcessJobError(`job ${job.id} has no lease owner`);
 
     let outboundToFail: string | undefined;
     let inboundProcessing = false;
     try {
       const history = await this.messages.listByConversation(job.conversationId);
       const inbound = history.find((m) => m.id === job.inboundMessageId);
-      if (!inbound) throw new Error(`inbound message ${job.inboundMessageId} not found`);
+      if (!inbound) throw new ProcessJobError(`inbound message ${job.inboundMessageId} not found`);
       outboundToFail = history.find(
         (m) => m.direction === messageDirection.outbound && m.inReplyTo === job.inboundMessageId,
       )?.id;
@@ -91,7 +93,7 @@ export class ProcessJob {
       outboundToFail = outbound.id;
 
       const conversation = await this.conversations.getById(job.conversationId);
-      if (!conversation) throw new Error(`conversation ${job.conversationId} not found`);
+      if (!conversation) throw new ProcessJobError(`conversation ${job.conversationId} not found`);
       await this.smsProvider.send({
         to: conversation.userPhone,
         from: conversation.systemPhone,

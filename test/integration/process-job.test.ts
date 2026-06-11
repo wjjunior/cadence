@@ -1,6 +1,6 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { ProcessJob } from '../../src/application/process-job.js';
+import { ProcessJob, ProcessJobError } from '../../src/application/process-job.js';
 import type { ReplyGenerator } from '../../src/application/ports/reply-generator.js';
 import { conversationKey } from '../../src/domain/conversation.js';
 import type { Job } from '../../src/domain/job.js';
@@ -128,6 +128,13 @@ describe('ProcessJob', () => {
     expect(outbound[0]?.status).toBe('sent');
   });
 
+  it('should reject with ProcessJobError when the job has no lease owner', async () => {
+    const job = await seedClaimedJob();
+    await expect(
+      makeProcessJob(fastGenerator).execute({ ...job, lockedBy: null }),
+    ).rejects.toBeInstanceOf(ProcessJobError);
+  });
+
   it('should reschedule with backoff on a send failure without duplicating the outbound', async () => {
     sms.failNextSends(1);
     const job = await seedClaimedJob();
@@ -171,7 +178,6 @@ describe('ProcessJob', () => {
 
   it('should fail a prior-attempt outbound when the terminal attempt throws before recreating it', async () => {
     const seeded = await seedClaimedJob();
-    // a prior attempt left a queued outbound
     await uow.run((tx) =>
       messages.insertOutbound(tx, {
         conversationId: seeded.conversationId,
