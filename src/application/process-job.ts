@@ -24,8 +24,8 @@ export interface ProcessJobSettings {
   random: () => number;
 }
 
-// Validates the queued -> sending -> end path through the domain machine and returns the
-// endpoint, so only legal terminal states (sent | failed) are persisted (sending is transient).
+// sending is transient: persist only the endpoint, but route through the domain machine so an
+// illegal target throws rather than being written.
 function walkOutbound(end: OutboundStatus): OutboundStatus {
   return transitionOutbound(
     transitionOutbound(outboundStatus.queued, outboundStatus.sending),
@@ -46,7 +46,11 @@ export class ProcessJob {
   ) {}
 
   async execute(job: Job): Promise<void> {
+    const workerId = job.lockedBy;
+    if (!workerId) throw new Error(`job ${job.id} has no lease owner`);
+
     let outboundToFail: string | undefined;
+    let inboundProcessing = false;
     try {
       const history = await this.messages.listByConversation(job.conversationId);
       const inbound = history.find((m) => m.id === job.inboundMessageId);
@@ -63,6 +67,9 @@ export class ProcessJob {
             transitionInbound(inboundStatus.received, inboundStatus.processing),
           ),
         );
+        inboundProcessing = true;
+      } else if (inbound.status === inboundStatus.processing) {
+        inboundProcessing = true;
       }
 
       const { body } = await this.replyGenerator.generate({
@@ -99,16 +106,22 @@ export class ProcessJob {
           inbound.id,
           transitionInbound(inboundStatus.processing, inboundStatus.processed),
         );
-        await this.workerQueue.complete(tx, job.id);
+        await this.workerQueue.complete(tx, job.id, workerId);
         await this.conversations.touch(tx, job.conversationId);
         await this.notifier.conversationChanged(tx, job.conversationId);
       });
     } catch (error) {
-      await this.handleFailure(job, error, outboundToFail);
+      await this.handleFailure(job, workerId, error, outboundToFail, inboundProcessing);
     }
   }
 
-  private async handleFailure(job: Job, error: unknown, outboundId: string | undefined): Promise<void> {
+  private async handleFailure(
+    job: Job,
+    workerId: string,
+    error: unknown,
+    outboundId: string | undefined,
+    inboundProcessing: boolean,
+  ): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     const terminal = job.attempts >= job.maxAttempts;
     const retryAt = terminal
@@ -119,14 +132,16 @@ export class ProcessJob {
         );
 
     await this.uow.run(async (tx) => {
-      await this.workerQueue.fail(tx, job.id, message, retryAt);
+      await this.workerQueue.fail(tx, job.id, workerId, message, retryAt);
       if (!terminal) return;
-      await this.messages.markStatus(
-        tx,
-        job.inboundMessageId,
-        transitionInbound(inboundStatus.processing, inboundStatus.failed),
-        message,
-      );
+      if (inboundProcessing) {
+        await this.messages.markStatus(
+          tx,
+          job.inboundMessageId,
+          transitionInbound(inboundStatus.processing, inboundStatus.failed),
+          message,
+        );
+      }
       if (outboundId) {
         await this.messages.markStatus(tx, outboundId, walkOutbound(outboundStatus.failed), message);
       }

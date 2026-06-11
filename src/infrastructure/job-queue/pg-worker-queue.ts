@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import type { WorkerQueue } from '../../application/ports/job-queue.js';
 import type { Tx } from '../../application/ports/tx.js';
@@ -92,23 +92,24 @@ export class PgWorkerQueue implements WorkerQueue {
     return null;
   }
 
-  async complete(tx: Tx, jobId: string): Promise<void> {
-    await asDrizzle(tx).update(jobs).set({ status: jobStatus.completed }).where(eq(jobs.id, jobId));
+  async complete(tx: Tx, jobId: string, workerId: string): Promise<void> {
+    await asDrizzle(tx)
+      .update(jobs)
+      .set({ status: jobStatus.completed })
+      .where(and(eq(jobs.id, jobId), eq(jobs.lockedBy, workerId)));
   }
 
-  async fail(tx: Tx, jobId: string, error: string, retryAt: Date | null): Promise<void> {
+  async fail(tx: Tx, jobId: string, workerId: string, error: string, retryAt: Date | null): Promise<void> {
+    const owned = and(eq(jobs.id, jobId), eq(jobs.lockedBy, workerId));
     const d = asDrizzle(tx);
     if (retryAt) {
       await d
         .update(jobs)
         .set({ status: jobStatus.pending, nextRunAt: retryAt, lastError: error })
-        .where(eq(jobs.id, jobId));
+        .where(owned);
       return;
     }
-    await d
-      .update(jobs)
-      .set({ status: jobStatus.failed, lastError: error })
-      .where(eq(jobs.id, jobId));
+    await d.update(jobs).set({ status: jobStatus.failed, lastError: error }).where(owned);
   }
 
   async reapExpiredLeases(): Promise<number> {
