@@ -155,3 +155,47 @@ describe('WorkerRuntime poll + reaper + concurrency', () => {
     expect(processed).toHaveLength(0);
   });
 });
+
+describe('WorkerRuntime LISTEN wake-up', () => {
+  it('should pick up a job via notification well before the poll would', async () => {
+    const { processed, processJob } = recorder();
+    // Long poll so a fast pickup can only be the notification path.
+    runtime = new WorkerRuntime({
+      queue,
+      sql,
+      processJob,
+      concurrency: 2,
+      reconcilePollMs: 60_000,
+      workerId: 'w',
+    });
+    await runtime.start();
+
+    const jobId = await seedPendingJob();
+    await sql.notify('job_created', jobId);
+
+    await waitFor(() => processed.includes(jobId), 2000);
+    expect(processed).toContain(jobId);
+  });
+
+  it('should process a single job once despite duplicate notifications', async () => {
+    const { processed, processJob } = recorder();
+    runtime = new WorkerRuntime({
+      queue,
+      sql,
+      processJob,
+      concurrency: 4,
+      reconcilePollMs: 60_000,
+      workerId: 'w',
+    });
+    await runtime.start();
+
+    const jobId = await seedPendingJob();
+    await sql.notify('job_created', jobId);
+    await sql.notify('job_created', jobId);
+    await sql.notify('job_created', jobId);
+
+    await waitFor(() => processed.length >= 1, 2000);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(processed).toEqual([jobId]);
+  });
+});

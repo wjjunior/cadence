@@ -1,6 +1,7 @@
 import type { WorkerQueue } from '../../application/ports/job-queue.js';
 import type { Job } from '../../domain/job.js';
 import type { DbClient } from '../db/client.js';
+import { notifyChannels } from '../db/notify-channels.js';
 
 export interface WorkerRuntimeDeps {
   queue: WorkerQueue;
@@ -20,6 +21,7 @@ export class WorkerRuntime {
   private runners: Promise<void>[] = [];
   private waiters: Array<() => void> = [];
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private listener: { unlisten: () => Promise<void> } | null = null;
 
   constructor(private readonly deps: WorkerRuntimeDeps) {
     this.onError = deps.onError ?? noop;
@@ -27,6 +29,13 @@ export class WorkerRuntime {
 
   async start(): Promise<void> {
     this.stopped = false;
+    // onNotify wakes for latency; onListen wakes on every (re)connect — the
+    // reconciliation sweep that closes the NOTIFY-lost-while-disconnected gap.
+    this.listener = await this.deps.sql.listen(
+      notifyChannels.jobCreated,
+      () => this.wake(),
+      () => this.wake(),
+    );
     this.pollTimer = setInterval(() => void this.reapAndWake(), this.deps.reconcilePollMs);
     for (let i = 0; i < this.deps.concurrency; i++) {
       this.runners.push(this.runLoop(`${this.deps.workerId}-${i}`));
@@ -38,6 +47,10 @@ export class WorkerRuntime {
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
+    }
+    if (this.listener) {
+      await this.listener.unlisten();
+      this.listener = null;
     }
     this.wake();
     await Promise.all(this.runners);
