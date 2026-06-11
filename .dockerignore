@@ -4,7 +4,6 @@ dist
 .github
 test
 specs
-admin
 coverage
 *.md
 .env
