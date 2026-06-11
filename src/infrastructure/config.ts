@@ -18,28 +18,31 @@ const DEFAULT_RECONCILE_POLL_MS = 5_000;
 
 const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
 
-const port = (defaultMs: number) => z.coerce.number().int().positive().default(defaultMs);
+const positiveInt = (defaultValue: number) =>
+  z.coerce.number().int().positive().default(defaultValue);
 
 // A blank value in a copied .env (e.g. TWILIO_ACCOUNT_SID=) means "unset", not a
 // zero-length secret, so it must not trip the min(1) check while in mock mode.
 const optionalSecret = () =>
   z.preprocess((v) => (v === '' ? undefined : v), z.string().min(1).optional());
 
+const databaseUrlSchema = z
+  .string()
+  .refine((v) => v.startsWith('postgres://') || v.startsWith('postgresql://'), {
+    message: 'must be a postgres connection string (postgres:// or postgresql://)',
+  })
+  .default(DEFAULT_DATABASE_URL);
+
 const envSchema = z
   .object({
-    DATABASE_URL: z
-      .string()
-      .refine((v) => v.startsWith('postgres://') || v.startsWith('postgresql://'), {
-        message: 'must be a postgres connection string (postgres:// or postgresql://)',
-      })
-      .default(DEFAULT_DATABASE_URL),
+    DATABASE_URL: databaseUrlSchema,
     SMS_PROVIDER: z.enum([smsProvider.mock, smsProvider.twilio]).default(smsProvider.mock),
     REPLY_DELAY_MIN_MS: z.coerce.number().int().nonnegative().default(DEFAULT_REPLY_DELAY_MIN_MS),
     REPLY_DELAY_MAX_MS: z.coerce.number().int().nonnegative().default(DEFAULT_REPLY_DELAY_MAX_MS),
-    WORKER_CONCURRENCY: port(DEFAULT_WORKER_CONCURRENCY),
-    JOB_MAX_ATTEMPTS: port(DEFAULT_JOB_MAX_ATTEMPTS),
-    LEASE_DURATION_MS: port(DEFAULT_LEASE_DURATION_MS),
-    RECONCILE_POLL_MS: port(DEFAULT_RECONCILE_POLL_MS),
+    WORKER_CONCURRENCY: positiveInt(DEFAULT_WORKER_CONCURRENCY),
+    JOB_MAX_ATTEMPTS: positiveInt(DEFAULT_JOB_MAX_ATTEMPTS),
+    LEASE_DURATION_MS: positiveInt(DEFAULT_LEASE_DURATION_MS),
+    RECONCILE_POLL_MS: positiveInt(DEFAULT_RECONCILE_POLL_MS),
     TWILIO_ACCOUNT_SID: optionalSecret(),
     TWILIO_AUTH_TOKEN: optionalSecret(),
     TWILIO_FROM_NUMBER: optionalSecret(),
@@ -77,6 +80,17 @@ export class ConfigValidationError extends Error {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const result = envSchema.safeParse(env);
+  if (!result.success) {
+    throw new ConfigValidationError(result.error);
+  }
+  return result.data;
+}
+
+// The migration CLI needs only the database URL and must not require the SMS
+// configuration (e.g. Twilio credentials) just to run migrations — so it routes
+// through here rather than reading process.env itself (rule 11).
+export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const result = databaseUrlSchema.safeParse(env.DATABASE_URL);
   if (!result.success) {
     throw new ConfigValidationError(result.error);
   }

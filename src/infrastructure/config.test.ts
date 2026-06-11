@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConfigValidationError, loadConfig } from './config.js';
+import { ConfigValidationError, loadConfig, loadDatabaseUrl } from './config.js';
 
 const twilioEnv = {
   SMS_PROVIDER: 'twilio',
@@ -94,6 +94,24 @@ describe('loadConfig', () => {
 
   it('should reject a reply delay window where the minimum exceeds the maximum', () => {
     expect(() => loadConfig({ REPLY_DELAY_MIN_MS: '20000', REPLY_DELAY_MAX_MS: '15000' })).toThrow(
+      ConfigValidationError,
+    );
+  });
+});
+
+describe('loadDatabaseUrl', () => {
+  it('should return the provided database url', () => {
+    expect(loadDatabaseUrl({ DATABASE_URL: 'postgres://u:p@db:5432/app' })).toBe(
+      'postgres://u:p@db:5432/app',
+    );
+  });
+
+  it('should resolve to the default when no database url is set', () => {
+    expect(loadDatabaseUrl({})).toMatch(/^postgres(ql)?:\/\//);
+  });
+
+  it('should throw ConfigValidationError on a malformed database url', () => {
+    expect(() => loadDatabaseUrl({ DATABASE_URL: 'not-a-connection-string' })).toThrow(
       ConfigValidationError,
     );
   });
