@@ -5,8 +5,8 @@ import { notifyChannels } from '../db/notify-channels.js';
 import { asDrizzle } from '../db/tx.js';
 
 export class PgNotifier implements Notifier {
-  async jobCreated(tx: Tx, jobId: string): Promise<void> {
-    await asDrizzle(tx).execute(sql`select pg_notify(${notifyChannels.jobCreated}, ${jobId})`);
+  async jobCreated(tx: Tx): Promise<void> {
+    await asDrizzle(tx).execute(sql`select pg_notify(${notifyChannels.jobCreated}, '')`);
   }
 
   async conversationChanged(tx: Tx, conversationId: string): Promise<void> {
