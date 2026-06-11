@@ -34,9 +34,10 @@ interface JobRow {
 // this UPDATE … RETURNING path, so the boundary mapper normalizes to Date.
 const toDate = (v: string | Date): Date => (v instanceof Date ? v : new Date(v));
 
-// Boundary mapper: the status column is CHECK-constrained in the schema, so the
-// row value is a valid JobStatus by construction.
-function toJob(row: JobRow): Job {
+// Maps a raw postgres.js claim row (snake_case) to a Job — distinct from
+// db/mappers.ts toJob, which maps a Drizzle $inferSelect row. The status column
+// is CHECK-constrained in the schema, so the value is a valid JobStatus.
+function rowToJob(row: JobRow): Job {
   return {
     id: row.id,
     inboundMessageId: row.inbound_message_id,
@@ -80,7 +81,7 @@ export class PgWorkerQueue implements WorkerQueue {
             LIMIT 1)
           RETURNING *`;
         const row = rows[0];
-        return row ? toJob(row) : null;
+        return row ? rowToJob(row) : null;
       } catch (error) {
         if (isBenignContention(error)) continue;
         throw error;
