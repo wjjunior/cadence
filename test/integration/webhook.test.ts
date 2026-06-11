@@ -1,3 +1,5 @@
+import { createHmac } from 'node:crypto';
+
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -14,6 +16,7 @@ import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/
 import { PgHealthRepository } from '../../src/infrastructure/repositories/health-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
+import { TwilioSignatureVerifier } from '../../src/infrastructure/sms/twilio-signature-verifier.js';
 import { buildServer } from '../../src/http/server.js';
 import { silentLogger } from '../helpers/silent-logger.js';
 
@@ -146,6 +149,91 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
+    await expectNothingPersisted();
+  });
+});
+
+describe('POST /webhooks/twilio/sms — signature (twilio mode)', () => {
+  const TOKEN = 'test-auth-token';
+  const SIGNED_HOST = 'example.com';
+  let signedApp: FastifyInstance;
+
+  const signFor = (params: Record<string, string>): string => {
+    const signed = Object.keys(params)
+      .sort()
+      .reduce((acc, key) => acc + key + params[key], `http://${SIGNED_HOST}/webhooks/twilio/sms`);
+    return createHmac('sha1', TOKEN).update(signed, 'utf8').digest('base64');
+  };
+
+  const post = (params: Record<string, string>, signature: string | null) =>
+    signedApp.inject({
+      method: 'POST',
+      url: '/webhooks/twilio/sms',
+      headers: {
+        ...FORM_HEADERS,
+        host: SIGNED_HOST,
+        ...(signature === null ? {} : { 'x-twilio-signature': signature }),
+      },
+      payload: new URLSearchParams(params).toString(),
+    });
+
+  const validParams = (sid: string): Record<string, string> => ({
+    From: '+15550001234',
+    To: '+15559876543',
+    Body: 'signed hello',
+    MessageSid: sid,
+  });
+
+  beforeAll(async () => {
+    const conversations = new DrizzleConversationRepository(client.db);
+    const messages = new DrizzleMessageRepository(client.db);
+    signedApp = buildServer({
+      listConversations: new ListConversations(conversations),
+      getConversationDetail: new GetConversationDetail(conversations, messages),
+      ingestInboundMessage: new IngestInboundMessage(
+        new DrizzleUnitOfWork(client.db),
+        new DrizzleWebhookEventRepository(),
+        conversations,
+        messages,
+        new DrizzleJobEnqueuer(),
+        new PgNotifier(),
+        silentLogger,
+      ),
+      verifier: new TwilioSignatureVerifier(TOKEN),
+      eventBus: { subscribe: () => () => {} },
+      heartbeatMs: 15_000,
+      healthRepository: new PgHealthRepository(client.sql),
+      smsProvider: 'twilio',
+    });
+    await signedApp.ready();
+  });
+
+  afterAll(async () => {
+    await signedApp?.close();
+  });
+
+  it('should accept a correctly signed webhook and persist it', async () => {
+    const params = validParams('SMsigned00000000000000000000000001');
+    const res = await post(params, signFor(params));
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe('<Response/>');
+    expect(await rowCount('messages')).toBe(1);
+  });
+
+  it('should reject an invalid signature with 403 and persist nothing', async () => {
+    const params = validParams('SMsigned00000000000000000000000002');
+    const res = await post(params, 'not-the-right-signature');
+
+    expect(res.statusCode).toBe(403);
+    await expectNothingPersisted();
+  });
+
+  it('should reject a missing signature with 403 and persist nothing', async () => {
+    const params = validParams('SMsigned00000000000000000000000003');
+    const res = await post(params, null);
+
+    expect(res.statusCode).toBe(403);
     await expectNothingPersisted();
   });
 });

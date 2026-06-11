@@ -12,6 +12,7 @@ import { DrizzleJobEnqueuer } from '../infrastructure/repositories/job-enqueuer.
 import { DrizzleMessageRepository } from '../infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../infrastructure/repositories/webhook-event-repository.js';
+import { TwilioSignatureVerifier } from '../infrastructure/sms/twilio-signature-verifier.js';
 import { buildServer } from '../http/server.js';
 
 async function main(): Promise<void> {
@@ -35,10 +36,17 @@ async function main(): Promise<void> {
       logger,
     );
 
+    const verifier =
+      config.SMS_PROVIDER === smsProvider.twilio && config.TWILIO_AUTH_TOKEN
+        ? new TwilioSignatureVerifier(config.TWILIO_AUTH_TOKEN)
+        : undefined;
+
     const app = buildServer({
       listConversations: new ListConversations(conversations),
       getConversationDetail: new GetConversationDetail(conversations, messages),
       ingestInboundMessage,
+      verifier,
+      trustProxy: config.TRUST_PROXY,
       eventBus,
       heartbeatMs: config.SSE_HEARTBEAT_MS,
       loggerInstance: logger,

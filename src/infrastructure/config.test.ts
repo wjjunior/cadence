@@ -27,6 +27,12 @@ describe('loadConfig', () => {
     expect(config.SSE_HEARTBEAT_MS).toBe(15_000);
     expect(config.LOG_LEVEL).toBe('info');
     expect(config.METRICS_POLL_MS).toBe(10_000);
+    expect(config.TRUST_PROXY).toBe(false);
+  });
+
+  it('should enable TRUST_PROXY only for an explicit truthy value', () => {
+    expect(loadConfig({ TRUST_PROXY: 'true' }).TRUST_PROXY).toBe(true);
+    expect(loadConfig({ TRUST_PROXY: 'nope' }).TRUST_PROXY).toBe(false);
   });
 
   it('should reject an unknown LOG_LEVEL value', () => {

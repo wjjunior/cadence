@@ -57,6 +57,9 @@ const envSchema = z
     BACKOFF_CAP_MS: positiveInt(DEFAULT_BACKOFF_CAP_MS),
     API_PORT: positiveInt(DEFAULT_API_PORT),
     SSE_HEARTBEAT_MS: positiveInt(DEFAULT_SSE_HEARTBEAT_MS),
+    // Off by default: only trust X-Forwarded-* (for the Twilio signature URL) behind a
+    // known proxy/LB. Enabling it blindly would let a client spoof the scheme/host.
+    TRUST_PROXY: z.preprocess((v) => v === 'true' || v === '1', z.boolean()),
     METRICS_POLL_MS: positiveInt(DEFAULT_METRICS_POLL_MS),
     LOG_LEVEL: z.enum(logLevels).default(DEFAULT_LOG_LEVEL),
     TWILIO_ACCOUNT_SID: optionalSecret(),
