@@ -1,3 +1,8 @@
 allowBuilds:
   esbuild: true
   lefthook: true
+  # testcontainers' Docker transport (dockerode) pulls these native/optional
+  # build scripts; not needed for the local Docker socket, so left unbuilt.
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

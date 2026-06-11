@@ -16,6 +16,9 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/infrastructure/db/migrate.ts",
     "dev:api": "tsx watch src/entrypoints/api.ts",
     "dev:worker": "tsx watch src/entrypoints/worker.ts",
     "start:api": "node dist/entrypoints/api.js",
@@ -25,7 +28,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@testcontainers/postgresql": "^12.0.1",
     "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^9.1.0",
     "lefthook": "^1.10.0",
@@ -34,5 +39,9 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.20.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
   }
 }
