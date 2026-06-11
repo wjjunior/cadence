@@ -74,6 +74,13 @@ describe('GET /api/conversations', () => {
     expect(page2.nextCursor).toBeNull();
   });
 
+  it('should treat an empty cursor the same as omitting it (first page)', async () => {
+    await seedConversation(0);
+    const res = await app.inject({ url: '/api/conversations?cursor=&limit=2' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<ConversationListPage>().items.length).toBeGreaterThan(0);
+  });
+
   it('should return 400 for an invalid limit', async () => {
     const res = await app.inject({ url: '/api/conversations?limit=0' });
     expect(res.statusCode).toBe(400);

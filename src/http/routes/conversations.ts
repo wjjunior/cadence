@@ -9,7 +9,11 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 const listQuery = z.object({
-  cursor: z.string().optional(),
+  // An empty `cursor=` means "no cursor" (first page), the same as omitting it.
+  cursor: z
+    .string()
+    .optional()
+    .transform((v) => (v === '' ? undefined : v)),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
 });
 
