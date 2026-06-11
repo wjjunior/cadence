@@ -3,12 +3,17 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ConversationListPage, ConversationDetail } from '../../src/application/contracts/admin-dto.js';
+import { IngestInboundMessage } from '../../src/application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../../src/application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../../src/application/use-cases/list-conversations.js';
 import { type DbClient, createDbClient } from '../../src/infrastructure/db/client.js';
+import { DrizzleUnitOfWork } from '../../src/infrastructure/db/unit-of-work.js';
 import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 import { DrizzleConversationRepository } from '../../src/infrastructure/repositories/conversation-repository.js';
+import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
+import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
+import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
 import { buildServer } from '../../src/http/server.js';
 
 let container: StartedPostgreSqlContainer;
@@ -27,6 +32,14 @@ beforeAll(async () => {
   app = buildServer({
     listConversations: new ListConversations(conversations),
     getConversationDetail: new GetConversationDetail(conversations, messages),
+    ingestInboundMessage: new IngestInboundMessage(
+      new DrizzleUnitOfWork(client.db),
+      new DrizzleWebhookEventRepository(),
+      conversations,
+      messages,
+      new DrizzleJobEnqueuer(),
+      new PgNotifier(),
+    ),
   });
   await app.ready();
 });
