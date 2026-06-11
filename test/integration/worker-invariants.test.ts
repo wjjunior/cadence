@@ -50,6 +50,20 @@ function makeProcessJob(generator: ReplyGenerator): ProcessJob {
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const pad = (n: number): string => String(n).padStart(7, '0');
 
+// A true barrier: poll until a backend is genuinely waiting on a lock, so the
+// write-skew test commits the first transaction only once the second is blocked —
+// no timing guess.
+async function waitUntilLockWaiting(): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const rows = await sql<{ waiting: number }[]>`
+      select count(*)::int as waiting from pg_stat_activity
+      where wait_event_type = 'Lock' and state = 'active'`;
+    if ((rows[0]?.waiting ?? 0) > 0) return;
+    await sleep(10);
+  }
+  throw new Error('the second transaction never reached the lock-waiting state');
+}
+
 async function newConversation(): Promise<string> {
   const n = ++seq;
   const conversation = await uow.run((tx) =>
@@ -146,7 +160,7 @@ describe('worker invariants', () => {
         .then(() => null as { code?: string; constraint_name?: string } | null)
         .catch((error: { code?: string; constraint_name?: string }) => error);
 
-      await sleep(200); // let c2 reach the blocked state, then release the barrier
+      await waitUntilLockWaiting(); // release the barrier only once c2 is truly blocked
       await c1`commit`;
       c1Committed = true;
 
