@@ -2,6 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { IngestInboundMessage } from '../../src/application/ingest-inbound-message.js';
 import type { Notifier } from '../../src/application/ports/notifier.js';
+import { InvalidPhoneNumberError } from '../../src/domain/conversation.js';
 import { type DbClient, createDbClient } from '../../src/infrastructure/db/client.js';
 import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 import { DrizzleUnitOfWork } from '../../src/infrastructure/db/unit-of-work.js';
@@ -69,6 +70,13 @@ describe('IngestInboundMessage', () => {
     expect(await countRows('jobs')).toBe(1);
     const status = await client.sql<{ status: string }[]>`select status from messages limit 1`;
     expect(status[0]?.status).toBe('received');
+  });
+
+  it('should reject (not throw synchronously) on a malformed phone, before opening a transaction', async () => {
+    await expect(ingest.execute({ ...command, from: 'not-a-phone' }, rawPayload)).rejects.toThrow(
+      InvalidPhoneNumberError,
+    );
+    expect(await countRows('webhook_events')).toBe(0);
   });
 
   it('should short-circuit a duplicate providerSid with no new writes', async () => {

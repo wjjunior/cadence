@@ -21,7 +21,7 @@ export class IngestInboundMessage {
     private readonly notifier: Notifier,
   ) {}
 
-  execute(command: IngestInboundCommand, rawPayload: unknown): Promise<IngestResult> {
+  async execute(command: IngestInboundCommand, rawPayload: unknown): Promise<IngestResult> {
     // Normalized before the transaction so a malformed phone fails fast with nothing opened.
     const key = conversationKey(command.from, command.to);
     return this.uow.run(async (tx) => {
