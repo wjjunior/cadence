@@ -2,7 +2,7 @@
 
 A durable, idempotent conversational SMS pipeline with per-conversation ordering guarantees and an admin interface for conversation history.
 
-For the complete system design (architecture, decisions, rationale, acceptance criteria), consult the Notion page **System Design — Lahzo SMS** and its child **Parallel Execution Plan — Cadence (CAD)**. This file covers the day-to-day conventions you need at hand while coding.
+For the complete system design (architecture, decisions, rationale, acceptance criteria), consult the Notion page **System Design — SMS Pipeline** and its child **Parallel Execution Plan — Cadence (CAD)**. This file covers the day-to-day conventions you need at hand while coding.
 
 The guiding principle behind every decision: **boring, reliable technology with the minimum number of moving parts that satisfies the guarantees.** Where two designs satisfy the same invariant, the one with fewer stateful systems wins.
 
@@ -270,4 +270,4 @@ Per task: implement against the Acceptance Criteria → self-check against §5.4
 
 ## When in doubt
 
-Consult **System Design — Lahzo SMS** in Notion. It has the full rationale for every architectural decision, including alternatives considered and rejected. The §7 Acceptance Criteria (AC-1 through AC-8) are the definition of done.
+Consult **System Design — SMS Pipeline** in Notion. It has the full rationale for every architectural decision, including alternatives considered and rejected. The §7 Acceptance Criteria (AC-1 through AC-8) are the definition of done.
