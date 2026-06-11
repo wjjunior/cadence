@@ -2,14 +2,8 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
-// Dependency rule (CLAUDE.md "Backend: layered, hexagonal-lite"):
-//   domain/         -> depends on nothing
-//   application/    -> domain + ports only
-//   http/           -> delegates to application use cases (no infrastructure)
-//   infrastructure/ -> implements ports (no http, no entrypoints)
-//   entrypoints/    -> composition root (may import everything; never a restricted target)
-// Enforced as a lint boundary via scoped `no-restricted-imports`, deliberately
-// without an extra import-resolver plugin (fewer moving parts).
+// The layer dependency rule (src/README.md) is enforced with scoped
+// `no-restricted-imports` rather than an import-resolver plugin — fewer moving parts.
 const layerBoundary = (group, message) => ({
   'no-restricted-imports': ['error', { patterns: [{ group, message }] }],
 });
