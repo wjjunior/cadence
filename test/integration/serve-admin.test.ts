@@ -29,7 +29,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close();
   await client?.sql?.end();
-  rmSync(adminDir, { recursive: true, force: true });
+  if (adminDir) rmSync(adminDir, { recursive: true, force: true });
 });
 
 describe('serving the admin SPA', () => {
@@ -57,6 +57,13 @@ describe('serving the admin SPA', () => {
     const res = await app.inject({ url: '/api/config' });
     expect(res.statusCode).toBe(200);
     expect(res.json<{ smsProvider: string }>()).toEqual({ smsProvider: 'mock' });
+  });
+
+  it('should fall back to the SPA for a path that only shares an API prefix', async () => {
+    const res = await app.inject({ url: '/apiary' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.body).toContain('cadence-admin');
   });
 
   it('should return a JSON 404 (not the SPA) for an unknown API path', async () => {

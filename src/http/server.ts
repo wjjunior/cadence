@@ -33,7 +33,9 @@ const apiPrefixes = ['/api', '/dev', '/health', '/webhooks'] as const;
 function registerAdminSpa(app: FastifyInstance, adminDir: string): void {
   app.register(fastifyStatic, { root: adminDir, wildcard: false });
   app.setNotFoundHandler((request, reply) => {
-    if (request.method === 'GET' && !apiPrefixes.some((prefix) => request.url.startsWith(prefix))) {
+    const path = request.url.split('?', 1)[0] ?? request.url;
+    const isApiPath = apiPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+    if (request.method === 'GET' && !isApiPath) {
       return reply.type('text/html').sendFile('index.html');
     }
     return reply.code(404).send(errorResponse('not found'));
