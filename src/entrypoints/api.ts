@@ -1,7 +1,7 @@
 import { IngestInboundMessage } from '../application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../application/use-cases/list-conversations.js';
-import { loadConfig } from '../infrastructure/config.js';
+import { loadConfig, smsProvider } from '../infrastructure/config.js';
 import { createDbClient } from '../infrastructure/db/client.js';
 import { DrizzleUnitOfWork } from '../infrastructure/db/unit-of-work.js';
 import { PgEventBus } from '../infrastructure/events/pg-event-bus.js';
@@ -38,6 +38,7 @@ async function main(): Promise<void> {
     eventBus,
     heartbeatMs: config.SSE_HEARTBEAT_MS,
     healthRepository: new PgHealthRepository(sql),
+    simulate: config.SMS_PROVIDER === smsProvider.mock ? { ingestInboundMessage } : null,
   });
 
   app.addHook('onClose', async () => {
