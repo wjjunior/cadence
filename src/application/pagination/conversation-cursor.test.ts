@@ -27,4 +27,18 @@ describe('conversation cursor codec', () => {
     const bad = Buffer.from(JSON.stringify({ id: 'x' })).toString('base64url');
     expect(() => decodeConversationCursor(bad)).toThrow(InvalidCursorError);
   });
+
+  it('should reject a cursor with a non-ISO timestamp', () => {
+    const bad = Buffer.from(
+      JSON.stringify({ lastMessageAt: 'not-a-date', id: cursor.id }),
+    ).toString('base64url');
+    expect(() => decodeConversationCursor(bad)).toThrow(InvalidCursorError);
+  });
+
+  it('should reject a cursor with a non-UUID id', () => {
+    const bad = Buffer.from(
+      JSON.stringify({ lastMessageAt: cursor.lastMessageAt, id: 'not-a-uuid' }),
+    ).toString('base64url');
+    expect(() => decodeConversationCursor(bad)).toThrow(InvalidCursorError);
+  });
 });
