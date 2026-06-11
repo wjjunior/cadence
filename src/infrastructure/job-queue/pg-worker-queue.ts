@@ -9,6 +9,8 @@ import { asDrizzle } from '../db/tx.js';
 
 const UNIQUE_VIOLATION = '23505';
 const ONE_RUNNING_PER_CONVERSATION = 'one_running_per_conversation';
+// Safety backstop only: benign 23505 contention converges in 0–1 retries once the
+// winner commits and the FIFO predicate excludes our sibling.
 const MAX_CLAIM_CONTENTION_RETRIES = 8;
 
 export function isBenignContention(error: unknown): boolean {
