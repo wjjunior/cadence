@@ -21,7 +21,10 @@ export function ConversationSummaryCard({
       >
         <div className="flex items-center justify-between gap-2">
           <span className="truncate font-medium">{formatPhone(conversation.userPhone)}</span>
-          <time className="shrink-0 text-xs text-muted-foreground">
+          <time
+            dateTime={conversation.lastMessageAt}
+            className="shrink-0 text-xs text-muted-foreground"
+          >
             {relativeTime(conversation.lastMessageAt)}
           </time>
         </div>

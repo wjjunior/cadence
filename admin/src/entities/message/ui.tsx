@@ -55,7 +55,9 @@ export function MessageBubble({ message }: { message: MessageDto }) {
       >
         {message.body || <span className="italic opacity-70">(empty)</span>}
       </div>
-      <time className="text-[11px] text-muted-foreground">{formatTime(message.createdAt)}</time>
+      <time dateTime={message.createdAt} className="text-[11px] text-muted-foreground">
+        {formatTime(message.createdAt)}
+      </time>
     </div>
   );
 }

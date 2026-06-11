@@ -14,8 +14,8 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
   return new Date(iso).toLocaleDateString();
 }
 
-// E.164 → grouped display, e.g. +15550001234 → +1 555 000 1234. Non-E.164 input
-// is returned unchanged.
+// Groups a +1 (NANP) number for display, e.g. +15550001234 → +1 555 000 1234;
+// any other shape (other country codes, non-E.164) is returned unchanged.
 export function formatPhone(phone: string): string {
   const match = /^\+(\d)(\d{3})(\d{3})(\d{0,4})$/.exec(phone);
   if (!match) return phone;
