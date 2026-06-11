@@ -16,7 +16,7 @@ const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 const DEFAULT_LEASE_DURATION_MS = 60_000;
 const DEFAULT_RECONCILE_POLL_MS = 5_000;
 
-const TWILIO_KEYS = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
+const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
 
 const port = (defaultMs: number) => z.coerce.number().int().positive().default(defaultMs);
 
@@ -55,7 +55,7 @@ const envSchema = z
 
     if (cfg.SMS_PROVIDER !== smsProvider.twilio) return;
 
-    for (const key of TWILIO_KEYS) {
+    for (const key of twilioKeys) {
       if (!cfg[key]) {
         ctx.addIssue({
           code: 'custom',
