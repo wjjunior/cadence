@@ -21,6 +21,8 @@ describe('loadConfig', () => {
     expect(config.JOB_MAX_ATTEMPTS).toBe(3);
     expect(config.LEASE_DURATION_MS).toBe(60_000);
     expect(config.RECONCILE_POLL_MS).toBe(5_000);
+    expect(config.BACKOFF_BASE_MS).toBe(1_000);
+    expect(config.BACKOFF_CAP_MS).toBe(60_000);
   });
 
   it('should coerce numeric variables from their string env representation', () => {

@@ -15,6 +15,8 @@ const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 // 60s lease is 4x the 15s worst-case processing time (design §5.1).
 const DEFAULT_LEASE_DURATION_MS = 60_000;
 const DEFAULT_RECONCILE_POLL_MS = 5_000;
+const DEFAULT_BACKOFF_BASE_MS = 1_000;
+const DEFAULT_BACKOFF_CAP_MS = 60_000;
 
 const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
 
@@ -43,6 +45,8 @@ const envSchema = z
     JOB_MAX_ATTEMPTS: positiveInt(DEFAULT_JOB_MAX_ATTEMPTS),
     LEASE_DURATION_MS: positiveInt(DEFAULT_LEASE_DURATION_MS),
     RECONCILE_POLL_MS: positiveInt(DEFAULT_RECONCILE_POLL_MS),
+    BACKOFF_BASE_MS: positiveInt(DEFAULT_BACKOFF_BASE_MS),
+    BACKOFF_CAP_MS: positiveInt(DEFAULT_BACKOFF_CAP_MS),
     TWILIO_ACCOUNT_SID: optionalSecret(),
     TWILIO_AUTH_TOKEN: optionalSecret(),
     TWILIO_FROM_NUMBER: optionalSecret(),
