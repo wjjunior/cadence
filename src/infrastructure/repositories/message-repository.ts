@@ -42,9 +42,10 @@ export class DrizzleMessageRepository implements MessageRepository {
         inReplyTo: input.inReplyTo,
         providerMessageSid: input.providerMessageSid,
       })
+      // no-op DO UPDATE (not DO NOTHING) so RETURNING yields the existing row on a dedup retry.
       .onConflictDoUpdate({
         target: messages.idempotencyKey,
-        targetWhere: sql`${messages.direction} = 'outbound'`,
+        targetWhere: sql`${messages.direction} = ${messageDirection.outbound}`,
         set: { idempotencyKey: sql`excluded.idempotency_key` },
       })
       .returning();
@@ -56,11 +57,17 @@ export class DrizzleMessageRepository implements MessageRepository {
     tx: Tx,
     id: string,
     status: MessageStatus,
-    errorDetail: string | null = null,
+    errorDetail?: string | null,
   ): Promise<void> {
     await asDrizzle(tx)
       .update(messages)
-      .set({ status, errorDetail, updatedAt: sql`now()` })
+      // error_detail is only written when the caller passes it, so a happy-path status
+      // change does not wipe a previously recorded error.
+      .set(
+        errorDetail === undefined
+          ? { status, updatedAt: sql`now()` }
+          : { status, errorDetail, updatedAt: sql`now()` },
+      )
       .where(eq(messages.id, id));
   }
 

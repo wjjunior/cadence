@@ -28,10 +28,13 @@ export const conversations = pgTable(
     id: id(),
     userPhone: text('user_phone').notNull(),
     systemPhone: text('system_phone').notNull(),
-    lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: createdAt(),
   },
-  (t) => [unique('conversations_user_system_uq').on(t.userPhone, t.systemPhone)],
+  (t) => [
+    unique('conversations_user_system_uq').on(t.userPhone, t.systemPhone),
+    index('conversations_recency').on(t.lastMessageAt, t.id),
+  ],
 );
 
 export const messages = pgTable(

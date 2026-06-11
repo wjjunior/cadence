@@ -85,28 +85,24 @@ describe('DrizzleConversationRepository', () => {
     await new Promise((r) => setTimeout(r, 5));
     await uow.run((tx) => conversations.touch(tx, created.id));
     const after = await conversations.getById(created.id);
-    expect(after?.lastMessageAt?.getTime()).toBeGreaterThan(created.lastMessageAt!.getTime());
+    expect(after?.lastMessageAt.getTime()).toBeGreaterThan(created.lastMessageAt.getTime());
   });
 
-  it('should paginate by keyset with a last_message_at tie broken by id', async () => {
-    const ids: string[] = [];
+  it('should paginate by keyset without skipping or duplicating rows at the boundary', async () => {
     for (let i = 0; i < 5; i++) {
       const c = await uow.run((tx) => conversations.upsert(tx, nextKey()));
-      // force an identical last_message_at across all rows to exercise the id tiebreak
+      // identical last_message_at across all rows exercises the id tiebreak
       await client.sql`update conversations set last_message_at = '2026-06-11T00:00:00Z' where id = ${c.id}`;
-      ids.push(c.id);
     }
+    const full = await conversations.list({ cursor: null, limit: 10 });
     const pageOne = await conversations.list({ cursor: null, limit: 2 });
-    expect(pageOne).toHaveLength(2);
     const last = pageOne[1]!;
     const cursor = encodeConversationCursor({
-      lastMessageAt: last.lastMessageAt!.toISOString(),
+      lastMessageAt: last.lastMessageAt.toISOString(),
       id: last.id,
     });
     const pageTwo = await conversations.list({ cursor, limit: 2 });
-    expect(pageTwo).toHaveLength(2);
-    const seen = new Set([...pageOne, ...pageTwo].map((c) => c.id));
-    expect(seen.size).toBe(4);
+    expect([...pageOne, ...pageTwo].map((c) => c.id)).toEqual(full.slice(0, 4).map((c) => c.id));
   });
 });
 
@@ -142,13 +138,19 @@ describe('DrizzleMessageRepository', () => {
   });
 
   it('should update status with markStatus', async () => {
-    const { messageId } = await seedInbound();
+    const { conversationId, messageId } = await seedInbound();
     await uow.run((tx) => messages.markStatus(tx, messageId, inboundStatus.processing));
-    const list = await messages.listByConversation(
-      (await client.sql<{ conversation_id: string }[]>`
-        select conversation_id from messages where id = ${messageId}`)[0]!.conversation_id,
-    );
+    const list = await messages.listByConversation(conversationId);
     expect(list[0]?.status).toBe(inboundStatus.processing);
+  });
+
+  it('should preserve error_detail on a status change that omits it', async () => {
+    const { conversationId, messageId } = await seedInbound();
+    await uow.run((tx) => messages.markStatus(tx, messageId, inboundStatus.processing, 'boom'));
+    await uow.run((tx) => messages.markStatus(tx, messageId, inboundStatus.processed));
+    const list = await messages.listByConversation(conversationId);
+    expect(list[0]?.errorDetail).toBe('boom');
+    expect(list[0]?.status).toBe(inboundStatus.processed);
   });
 
   it('should list messages by conversation in created_at order', async () => {

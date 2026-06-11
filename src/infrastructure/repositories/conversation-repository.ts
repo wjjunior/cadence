@@ -54,7 +54,7 @@ export class DrizzleConversationRepository implements ConversationRepository {
           ? sql`(${conversations.lastMessageAt}, ${conversations.id}) < (${keyset.lastMessageAt}::timestamptz, ${keyset.id}::uuid)`
           : undefined,
       )
-      .orderBy(sql`${conversations.lastMessageAt} desc nulls last`, desc(conversations.id))
+      .orderBy(desc(conversations.lastMessageAt), desc(conversations.id))
       .limit(params.limit);
     return rows.map(toConversation);
   }
