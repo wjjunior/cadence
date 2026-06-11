@@ -169,9 +169,14 @@ No `process.env.FOO` scattered across the codebase. A single config module reads
 
 Twilio credentials are never logged and never hardcoded — the application runs end-to-end with none set. Note: phone numbers, message bodies, conversation/message/job ids, and statuses **are** logged — they are the operational record the design depends on for lifecycle reconstruction. The line is around credentials, not the operational data.
 
-### 13. Use Zod-inferred types as domain types when they fit
+### 13. Zod schemas are the contract; the inferred type is the truth
 
-The webhook payload, REST responses, and SSE envelopes are canonical as their inferred Zod types. Only introduce a separate domain model when the external shape genuinely disagrees with how the domain wants to work. Don't write mapper boilerplate for shapes that are already correct.
+Every cross-boundary payload is a Zod schema, and its inferred type **is** the type — never maintain a parallel hand-written interface. Placement follows ownership:
+
+- **Transport/wire shapes** (the Twilio webhook form, the SSE envelope) live in `http/schemas/`, next to the route that owns them.
+- **Use-case input/output contracts** (the ingest command, the admin DTOs) live in `application/contracts/`.
+
+The `http/` layer transforms transport ↔ use-case contract at the boundary (rule 5), so a route never leaks a third party's wire shape into a use case. **Domain entity types** (`Message`, `Job`, `Conversation`) stay plain TS in `domain/` — the DB schema is their source, mapped by the repositories; the domain never imports Zod-derived transport types.
 
 ### 14. Adapters for external integrations
 
