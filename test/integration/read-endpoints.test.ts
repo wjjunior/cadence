@@ -27,6 +27,8 @@ beforeAll(async () => {
   app = buildServer({
     listConversations: new ListConversations(conversations),
     getConversationDetail: new GetConversationDetail(conversations, messages),
+    eventBus: { subscribe: () => () => {} },
+    heartbeatMs: 15_000,
   });
   await app.ready();
 });

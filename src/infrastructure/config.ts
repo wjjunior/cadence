@@ -18,6 +18,8 @@ const DEFAULT_RECONCILE_POLL_MS = 5_000;
 const DEFAULT_BACKOFF_BASE_MS = 1_000;
 const DEFAULT_BACKOFF_CAP_MS = 60_000;
 const DEFAULT_API_PORT = 3_000;
+// 15s heartbeat sits well under the ~60s idle timeout of typical proxies.
+const DEFAULT_SSE_HEARTBEAT_MS = 15_000;
 
 const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
 
@@ -49,6 +51,7 @@ const envSchema = z
     BACKOFF_BASE_MS: positiveInt(DEFAULT_BACKOFF_BASE_MS),
     BACKOFF_CAP_MS: positiveInt(DEFAULT_BACKOFF_CAP_MS),
     API_PORT: positiveInt(DEFAULT_API_PORT),
+    SSE_HEARTBEAT_MS: positiveInt(DEFAULT_SSE_HEARTBEAT_MS),
     TWILIO_ACCOUNT_SID: optionalSecret(),
     TWILIO_AUTH_TOKEN: optionalSecret(),
     TWILIO_FROM_NUMBER: optionalSecret(),

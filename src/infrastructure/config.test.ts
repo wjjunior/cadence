@@ -24,6 +24,7 @@ describe('loadConfig', () => {
     expect(config.BACKOFF_BASE_MS).toBe(1_000);
     expect(config.BACKOFF_CAP_MS).toBe(60_000);
     expect(config.API_PORT).toBe(3000);
+    expect(config.SSE_HEARTBEAT_MS).toBe(15_000);
   });
 
   it('should coerce an API_PORT override', () => {
