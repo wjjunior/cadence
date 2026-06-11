@@ -40,6 +40,8 @@ beforeAll(async () => {
       new DrizzleJobEnqueuer(),
       new PgNotifier(),
     ),
+    eventBus: { subscribe: () => () => {} },
+    heartbeatMs: 15_000,
   });
   await app.ready();
 });

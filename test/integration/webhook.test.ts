@@ -42,6 +42,8 @@ beforeAll(async () => {
     listConversations: new ListConversations(conversations),
     getConversationDetail: new GetConversationDetail(conversations, messages),
     ingestInboundMessage,
+    eventBus: { subscribe: () => () => {} },
+    heartbeatMs: 15_000,
   });
   await app.ready();
 });
