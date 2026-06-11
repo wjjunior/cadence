@@ -1,8 +1,6 @@
 declare const txBrand: unique symbol;
 
-// Opaque transaction handle. A live transaction object cannot be reconstructed
-// outside infrastructure, so the brand is a module-private unique symbol (not a
-// forgeable string literal). The single concrete cast lives in infrastructure (CAD-15).
+// Module-private brand so a Tx cannot be forged outside infrastructure's single cast.
 export type Tx = { readonly [txBrand]: true };
 
 export interface UnitOfWork {

@@ -15,9 +15,7 @@ export const outboundStatus = {
 export type InboundStatus = (typeof inboundStatus)[keyof typeof inboundStatus];
 export type OutboundStatus = (typeof outboundStatus)[keyof typeof outboundStatus];
 
-// The full user-facing message-status vocabulary (§A.3), as a tuple so it can seed a
-// `z.enum` at the HTTP boundary from a single source. The drift-guard test asserts it
-// stays equal to the union of the per-direction objects above.
+// Tuple form so it can seed a z.enum; a drift test keeps it equal to the per-direction objects.
 export const messageStatusValues = [
   'received',
   'processing',
