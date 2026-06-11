@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conversationKey } from './conversation.js';
+import { conversationKey, InvalidPhoneNumberError } from './conversation.js';
 
 describe('conversationKey', () => {
   it('should normalize cosmetically different but equivalent numbers to the same key', () => {
@@ -24,9 +24,13 @@ describe('conversationKey', () => {
   });
 
   it('should reject numbers that cannot be normalized to E.164', () => {
-    expect(() => conversationKey('', '+15559876543')).toThrow();
-    expect(() => conversationKey('not-a-number', '+15559876543')).toThrow();
-    expect(() => conversationKey('+0123', '+15559876543')).toThrow(); // country code can't start with 0
-    expect(() => conversationKey(`+${'9'.repeat(16)}`, '+15559876543')).toThrow(); // > 15 digits
+    expect(() => conversationKey('', '+15559876543')).toThrow(InvalidPhoneNumberError);
+    expect(() => conversationKey('not-a-number', '+15559876543')).toThrow(InvalidPhoneNumberError);
+    // country code can't start with 0
+    expect(() => conversationKey('+0123', '+15559876543')).toThrow(InvalidPhoneNumberError);
+    // > 15 digits
+    expect(() => conversationKey(`+${'9'.repeat(16)}`, '+15559876543')).toThrow(
+      InvalidPhoneNumberError,
+    );
   });
 });

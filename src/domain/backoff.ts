@@ -3,8 +3,8 @@
 // keeps the delay monotonic in `attempt` for a fixed jitter value.
 const JITTER_RATIO = 0.5;
 
-// Exponential backoff capped at capMs, with jitter supplied by the caller so the
-// function stays pure (no Math.random in the domain). `rand` is in [0, 1).
+// Jitter is injected by the caller, not read from Math.random(), so the domain
+// stays pure and the result is deterministic.
 export function backoffDelay(
   attempt: number,
   baseMs: number,

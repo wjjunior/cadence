@@ -3,6 +3,8 @@ export interface ConversationKey {
   systemPhone: string;
 }
 
+export class InvalidPhoneNumberError extends Error {}
+
 const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
 
 function stripInternationalPrefix(trimmed: string): string {
@@ -15,14 +17,13 @@ function normalizeE164(raw: string): string {
   const digits = stripInternationalPrefix(raw.trim()).replace(/\D/g, '');
   const normalized = `+${digits}`;
   if (!E164_PATTERN.test(normalized)) {
-    throw new Error(`invalid E.164 phone number: ${JSON.stringify(raw)}`);
+    throw new InvalidPhoneNumberError(`invalid E.164 phone number: ${JSON.stringify(raw)}`);
   }
   return normalized;
 }
 
-// Normalizes both phone numbers to E.164 so cosmetically different but
-// equivalent representations resolve to the same conversation, backing the
-// UNIQUE (user_phone, system_phone) upsert in ingestion.
+// Equivalent but cosmetically different phone representations resolve to the
+// same conversation, backing the UNIQUE (user_phone, system_phone) upsert.
 export function conversationKey(userPhone: string, systemPhone: string): ConversationKey {
   return {
     userPhone: normalizeE164(userPhone),
