@@ -12,6 +12,8 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { JobStatus } from '../../domain/job.js';
+import type { MessageDirection, MessageStatus } from '../../domain/status.js';
 
 const id = () =>
   uuid()
@@ -26,10 +28,13 @@ export const conversations = pgTable(
     id: id(),
     userPhone: text('user_phone').notNull(),
     systemPhone: text('system_phone').notNull(),
-    lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: createdAt(),
   },
-  (t) => [unique('conversations_user_system_uq').on(t.userPhone, t.systemPhone)],
+  (t) => [
+    unique('conversations_user_system_uq').on(t.userPhone, t.systemPhone),
+    index('conversations_recency').on(t.lastMessageAt, t.id),
+  ],
 );
 
 export const messages = pgTable(
@@ -39,9 +44,9 @@ export const messages = pgTable(
     conversationId: uuid('conversation_id')
       .notNull()
       .references(() => conversations.id),
-    direction: text().notNull(),
+    direction: text().$type<MessageDirection>().notNull(),
     body: text().notNull(),
-    status: text().notNull(),
+    status: text().$type<MessageStatus>().notNull(),
     providerMessageSid: text('provider_message_sid'),
     idempotencyKey: text('idempotency_key'),
     inReplyTo: uuid('in_reply_to').references((): AnyPgColumn => messages.id),
@@ -79,7 +84,7 @@ export const jobs = pgTable(
     conversationId: uuid('conversation_id')
       .notNull()
       .references(() => conversations.id),
-    status: text().notNull().default('pending'),
+    status: text().$type<JobStatus>().notNull().default('pending'),
     attempts: integer().notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(3),
     nextRunAt: timestamp('next_run_at', { withTimezone: true }).notNull().defaultNow(),

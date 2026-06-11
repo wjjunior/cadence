@@ -7,7 +7,7 @@ export interface Conversation {
   id: string;
   userPhone: string;
   systemPhone: string;
-  lastMessageAt: Date | null;
+  lastMessageAt: Date;
   createdAt: Date;
 }
 
