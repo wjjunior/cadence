@@ -15,6 +15,19 @@ export const outboundStatus = {
 export type InboundStatus = (typeof inboundStatus)[keyof typeof inboundStatus];
 export type OutboundStatus = (typeof outboundStatus)[keyof typeof outboundStatus];
 
+// Tuple form so it can seed a z.enum; a drift test keeps it equal to the per-direction objects.
+export const messageStatusValues = [
+  'received',
+  'processing',
+  'processed',
+  'queued',
+  'sending',
+  'sent',
+  'failed',
+] as const;
+
+export type MessageStatus = (typeof messageStatusValues)[number];
+
 export const messageDirection = {
   inbound: 'inbound',
   outbound: 'outbound',

@@ -4,6 +4,7 @@ import {
   inboundStatus,
   type InboundStatus,
   InvalidStatusTransitionError,
+  messageStatusValues,
   outboundStatus,
   type OutboundStatus,
   transitionInbound,
@@ -41,6 +42,20 @@ const isValid = <S>(edges: ReadonlyArray<[S, S]>, from: S, to: S): boolean =>
 
 const allEdges = <S>(states: readonly S[]): Array<[S, S]> =>
   states.flatMap((from) => states.map((to): [S, S] => [from, to]));
+
+describe('messageStatusValues', () => {
+  it('should contain exactly the union of inbound and outbound status values', () => {
+    const expected = new Set<string>([
+      ...Object.values(inboundStatus),
+      ...Object.values(outboundStatus),
+    ]);
+    expect(new Set<string>(messageStatusValues)).toEqual(expected);
+  });
+
+  it('should not contain duplicates', () => {
+    expect(messageStatusValues.length).toBe(new Set<string>(messageStatusValues).size);
+  });
+});
 
 describe('transitionInbound', () => {
   for (const [from, to] of validInboundEdges) {
