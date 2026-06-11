@@ -2,6 +2,7 @@ import { conversationKey } from '../domain/conversation.js';
 import type { IngestInboundCommand } from './contracts/ingest-command.js';
 import type { ConversationRepository } from './ports/conversation-repository.js';
 import type { JobEnqueuer } from './ports/job-queue.js';
+import type { Logger } from './ports/logger.js';
 import type { MessageRepository } from './ports/message-repository.js';
 import type { Notifier } from './ports/notifier.js';
 import type { UnitOfWork } from './ports/tx.js';
@@ -19,18 +20,19 @@ export class IngestInboundMessage {
     private readonly messages: MessageRepository,
     private readonly jobs: JobEnqueuer,
     private readonly notifier: Notifier,
+    private readonly logger: Logger,
   ) {}
 
   async execute(command: IngestInboundCommand, rawPayload: unknown): Promise<IngestResult> {
     // Normalized before the transaction so a malformed phone fails fast with nothing opened.
     const key = conversationKey(command.from, command.to);
-    return this.uow.run(async (tx) => {
+    const result = await this.uow.run(async (tx) => {
       const { inserted } = await this.webhookEvents.insertIgnoringDuplicate(
         tx,
         command.providerSid,
         rawPayload,
       );
-      if (!inserted) return { duplicate: true };
+      if (!inserted) return { duplicate: true } as const;
 
       const conversation = await this.conversations.upsert(tx, key);
       const message = await this.messages.insertInbound(tx, {
@@ -44,7 +46,18 @@ export class IngestInboundMessage {
       });
       await this.notifier.jobCreated(tx);
 
-      return { duplicate: false, conversationId: conversation.id, messageId: message.id };
+      return { duplicate: false, conversationId: conversation.id, messageId: message.id } as const;
     });
+
+    if (result.duplicate) {
+      this.logger.info({ event: 'duplicate_ignored', providerSid: command.providerSid });
+    } else {
+      this.logger.info({
+        event: 'message_received',
+        conversationId: result.conversationId,
+        messageId: result.messageId,
+      });
+    }
+    return result;
   }
 }
