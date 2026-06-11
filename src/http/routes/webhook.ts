@@ -26,6 +26,7 @@ function buildVerifyPreHandler(verifier: WebhookVerifier) {
     });
     if (!ok) {
       await reply.code(403).send(errorResponse('invalid signature'));
+      return;
     }
   };
 }

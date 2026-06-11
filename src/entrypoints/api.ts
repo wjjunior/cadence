@@ -46,6 +46,7 @@ async function main(): Promise<void> {
       getConversationDetail: new GetConversationDetail(conversations, messages),
       ingestInboundMessage,
       verifier,
+      trustProxy: config.TRUST_PROXY,
       eventBus,
       heartbeatMs: config.SSE_HEARTBEAT_MS,
       loggerInstance: logger,

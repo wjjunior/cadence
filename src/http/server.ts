@@ -16,6 +16,9 @@ export type ServerDeps = ConversationRoutesDeps &
     // Present only in mock mode; the simulate route is otherwise absent (not just disabled).
     simulate?: SimulateRoutesDeps | null;
     loggerInstance?: FastifyBaseLogger;
+    // Trust X-Forwarded-* so the Twilio signature URL reflects the external scheme/host
+    // (only behind a known proxy; off by default).
+    trustProxy?: boolean;
   };
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
@@ -24,6 +27,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   // fires each connection's `close`, running the route teardown.
   const app = Fastify({
     forceCloseConnections: true,
+    trustProxy: deps.trustProxy ?? false,
     ...(deps.loggerInstance ? { loggerInstance: deps.loggerInstance } : {}),
   });
   // Twilio posts application/x-www-form-urlencoded, which Fastify does not parse natively.
