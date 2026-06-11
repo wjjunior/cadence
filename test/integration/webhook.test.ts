@@ -119,4 +119,17 @@ describe('POST /webhooks/twilio/sms', () => {
     expect(res.json<{ error: string }>().error).toBeTruthy();
     expect(await messageCount()).toBe(0);
   });
+
+  it('should reject a non-empty but malformed phone number with 400 and persist nothing', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/webhooks/twilio/sms',
+      headers: FORM_HEADERS,
+      payload: form({ From: 'not-a-phone' }),
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: string }>().error).toBeTruthy();
+    expect(await messageCount()).toBe(0);
+  });
 });
