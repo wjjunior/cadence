@@ -6,6 +6,7 @@ import { createDbClient } from '../infrastructure/db/client.js';
 import { DrizzleUnitOfWork } from '../infrastructure/db/unit-of-work.js';
 import { PgEventBus } from '../infrastructure/events/pg-event-bus.js';
 import { DrizzleConversationRepository } from '../infrastructure/repositories/conversation-repository.js';
+import { PgHealthRepository } from '../infrastructure/repositories/health-repository.js';
 import { DrizzleJobEnqueuer } from '../infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../infrastructure/repositories/notifier.js';
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
     ingestInboundMessage,
     eventBus,
     heartbeatMs: config.SSE_HEARTBEAT_MS,
+    healthRepository: new PgHealthRepository(sql),
   });
 
   app.addHook('onClose', async () => {

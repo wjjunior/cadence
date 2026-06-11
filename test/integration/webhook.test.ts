@@ -11,6 +11,7 @@ import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 import { DrizzleConversationRepository } from '../../src/infrastructure/repositories/conversation-repository.js';
 import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
+import { PgHealthRepository } from '../../src/infrastructure/repositories/health-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
 import { buildServer } from '../../src/http/server.js';
@@ -44,6 +45,7 @@ beforeAll(async () => {
     ingestInboundMessage,
     eventBus: { subscribe: () => () => {} },
     heartbeatMs: 15_000,
+    healthRepository: new PgHealthRepository(client.sql),
   });
   await app.ready();
 });

@@ -12,6 +12,7 @@ import { PgEventBus } from '../../src/infrastructure/events/pg-event-bus.js';
 import { DrizzleConversationRepository } from '../../src/infrastructure/repositories/conversation-repository.js';
 import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
+import { PgHealthRepository } from '../../src/infrastructure/repositories/health-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
 import { type ServerDeps, buildServer } from '../../src/http/server.js';
@@ -134,6 +135,7 @@ function makeServerDeps(): ServerDeps {
     ),
     eventBus: bus,
     heartbeatMs: HEARTBEAT_MS,
+    healthRepository: new PgHealthRepository(client.sql),
   };
 }
 

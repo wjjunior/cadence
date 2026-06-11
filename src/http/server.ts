@@ -3,9 +3,13 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import { type ConversationRoutesDeps, registerConversationRoutes } from './routes/conversations.js';
 import { type EventRoutesDeps, registerEventRoutes } from './routes/events.js';
+import { type HealthRoutesDeps, registerHealthRoutes } from './routes/health.js';
 import { type WebhookRoutesDeps, registerWebhookRoutes } from './routes/webhook.js';
 
-export type ServerDeps = ConversationRoutesDeps & WebhookRoutesDeps & EventRoutesDeps;
+export type ServerDeps = ConversationRoutesDeps &
+  WebhookRoutesDeps &
+  EventRoutesDeps &
+  HealthRoutesDeps;
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
   // SSE connections are long-lived and hijacked; without forceClose, app.close() would block on
@@ -17,5 +21,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerConversationRoutes(app, deps);
   registerWebhookRoutes(app, deps);
   registerEventRoutes(app, deps);
+  registerHealthRoutes(app, deps);
   return app;
 }
