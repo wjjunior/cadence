@@ -110,6 +110,20 @@ export class PgWorkerQueue implements WorkerQueue {
     return rows.length > 0;
   }
 
+  async stats(): Promise<{ pendingDepth: number; oldestPendingAgeMs: number | null }> {
+    const rows = await this.sql<{ depth: number; age_ms: string | null }[]>`
+      SELECT
+        count(*) FILTER (WHERE status = ${jobStatus.pending})::int AS depth,
+        EXTRACT(EPOCH FROM (now() - min(next_run_at) FILTER (
+          WHERE status = ${jobStatus.pending} AND next_run_at <= now()))) * 1000 AS age_ms
+      FROM jobs`;
+    const row = rows[0];
+    return {
+      pendingDepth: row?.depth ?? 0,
+      oldestPendingAgeMs: row?.age_ms == null ? null : Math.round(Number(row.age_ms)),
+    };
+  }
+
   async reapExpiredLeases(): Promise<number> {
     const rows = await this.sql`
       UPDATE jobs SET status = ${jobStatus.pending}, locked_by = NULL, lease_expires_at = NULL

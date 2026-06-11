@@ -14,6 +14,8 @@ import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-en
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { MockSmsProvider } from '../../src/infrastructure/sms/mock-sms-provider.js';
+import type { Logger } from '../../src/application/ports/logger.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 let container: StartedPostgreSqlContainer;
 let client: DbClient;
@@ -34,7 +36,7 @@ const settings = {
   random: () => 0,
 };
 
-function makeProcessJob(replyGenerator: ReplyGenerator): ProcessJob {
+function makeProcessJob(replyGenerator: ReplyGenerator, logger: Logger = silentLogger): ProcessJob {
   return new ProcessJob(
     uow,
     conversations,
@@ -44,6 +46,7 @@ function makeProcessJob(replyGenerator: ReplyGenerator): ProcessJob {
     sms,
     notifier,
     settings,
+    logger,
   );
 }
 
@@ -133,6 +136,30 @@ describe('ProcessJob', () => {
     await expect(
       makeProcessJob(fastGenerator).execute({ ...job, lockedBy: null }),
     ).rejects.toBeInstanceOf(ProcessJobError);
+  });
+
+  it('should log the lifecycle with the correlating ids on the happy path', async () => {
+    const events: Array<Record<string, unknown>> = [];
+    const make = (bindings: object): Logger => ({
+      debug: (o) => events.push({ ...bindings, ...o }),
+      info: (o) => events.push({ ...bindings, ...o }),
+      warn: (o) => events.push({ ...bindings, ...o }),
+      error: (o) => events.push({ ...bindings, ...o }),
+      child: (b) => make({ ...bindings, ...b }),
+    });
+    const capture = make({});
+    const job = await seedClaimedJob();
+    await makeProcessJob(fastGenerator, capture).execute(job);
+
+    const completed = events.find((e) => e.event === 'job_completed');
+    expect(completed).toMatchObject({
+      jobId: job.id,
+      conversationId: job.conversationId,
+      messageId: job.inboundMessageId,
+    });
+    expect(events.map((e) => e.event)).toEqual(
+      expect.arrayContaining(['job_processing', 'reply_sent', 'job_completed']),
+    );
   });
 
   it('should reschedule with backoff on a send failure without duplicating the outbound', async () => {

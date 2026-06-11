@@ -1,4 +1,5 @@
 import type { WorkerQueue } from '../../application/ports/job-queue.js';
+import type { Logger } from '../../application/ports/logger.js';
 import type { Job } from '../../domain/job.js';
 import type { DbClient } from '../db/client.js';
 import { notifyChannels } from '../db/notify-channels.js';
@@ -10,13 +11,14 @@ export interface WorkerRuntimeDeps {
   concurrency: number;
   reconcilePollMs: number;
   workerId: string;
-  onError?: (error: unknown, job: Job | null) => void;
+  logger: Logger;
 }
 
-const noop = (): void => {};
+const errMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 export class WorkerRuntime {
-  private readonly onError: (error: unknown, job: Job | null) => void;
+  private readonly log: Logger;
   private running = false;
   private stopped = false;
   private runners: Promise<void>[] = [];
@@ -25,7 +27,7 @@ export class WorkerRuntime {
   private listener: { unlisten: () => Promise<void> } | null = null;
 
   constructor(private readonly deps: WorkerRuntimeDeps) {
-    this.onError = deps.onError ?? noop;
+    this.log = deps.logger.child({ workerId: deps.workerId });
   }
 
   async start(): Promise<void> {
@@ -43,6 +45,7 @@ export class WorkerRuntime {
     for (let i = 0; i < this.deps.concurrency; i++) {
       this.runners.push(this.runLoop(`${this.deps.workerId}-${i}`));
     }
+    this.log.info({ event: 'worker_started', concurrency: this.deps.concurrency });
   }
 
   async stop(): Promise<void> {
@@ -59,6 +62,7 @@ export class WorkerRuntime {
     this.wake();
     await Promise.all(this.runners);
     this.runners = [];
+    this.log.info({ event: 'worker_stopped' });
   }
 
   // Self-rescheduling so a reconcile that outlasts the interval can never overlap
@@ -75,9 +79,10 @@ export class WorkerRuntime {
   // re-sweep — the durability backstop for any NOTIFY that was lost.
   private async reconcile(): Promise<void> {
     try {
-      await this.deps.queue.reapExpiredLeases();
+      const reaped = await this.deps.queue.reapExpiredLeases();
+      if (reaped > 0) this.log.info({ event: 'lease_reaped', count: reaped });
     } catch (error) {
-      this.onError(error, null);
+      this.log.error({ event: 'reconcile_error', error: errMessage(error) });
     }
     this.wake();
   }
@@ -98,14 +103,15 @@ export class WorkerRuntime {
       try {
         job = await this.deps.queue.claim(slotId);
       } catch (error) {
-        this.onError(error, null);
+        this.log.error({ event: 'claim_error', error: errMessage(error) });
       }
       if (this.stopped) break;
       if (job) {
+        this.log.info({ event: 'job_claimed', jobId: job.id, conversationId: job.conversationId });
         try {
           await this.deps.processJob(job);
         } catch (error) {
-          this.onError(error, job);
+          this.log.error({ event: 'process_error', jobId: job.id, error: errMessage(error) });
         }
         continue;
       }

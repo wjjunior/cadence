@@ -15,6 +15,7 @@ import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
 import { type ServerDeps, buildServer } from '../../src/http/server.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 const HEARTBEAT_MS = 80;
 const CID = 'c0000000-0000-4000-8000-000000000001';
@@ -131,6 +132,7 @@ function makeServerDeps(): ServerDeps {
       messages,
       new DrizzleJobEnqueuer(),
       notifier,
+      silentLogger,
     ),
     eventBus: bus,
     heartbeatMs: HEARTBEAT_MS,

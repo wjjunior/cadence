@@ -11,6 +11,7 @@ import {
 } from '../domain/status.js';
 import type { ConversationRepository } from './ports/conversation-repository.js';
 import type { WorkerQueue } from './ports/job-queue.js';
+import type { Logger } from './ports/logger.js';
 import type { MessageRepository } from './ports/message-repository.js';
 import type { Notifier } from './ports/notifier.js';
 import type { ReplyGenerator } from './ports/reply-generator.js';
@@ -45,11 +46,19 @@ export class ProcessJob {
     private readonly smsProvider: SmsProvider,
     private readonly notifier: Notifier,
     private readonly settings: ProcessJobSettings,
+    private readonly logger: Logger,
   ) {}
 
   async execute(job: Job): Promise<void> {
     const workerId = job.lockedBy;
     if (!workerId) throw new ProcessJobError(`job ${job.id} has no lease owner`);
+
+    const log = this.logger.child({
+      jobId: job.id,
+      conversationId: job.conversationId,
+      messageId: job.inboundMessageId,
+    });
+    log.info({ event: 'job_processing' });
 
     let outboundToFail: string | undefined;
     let inboundProcessing = false;
@@ -100,7 +109,9 @@ export class ProcessJob {
         body,
         idempotencyKey,
       });
+      log.info({ event: 'reply_sent' });
 
+      let completed = false;
       await this.uow.run(async (tx) => {
         const owned = await this.workerQueue.complete(tx, job.id, workerId);
         if (!owned) return;
@@ -112,9 +123,11 @@ export class ProcessJob {
         );
         await this.conversations.touch(tx, job.conversationId);
         await this.notifier.conversationChanged(tx, job.conversationId);
+        completed = true;
       });
+      if (completed) log.info({ event: 'job_completed' });
     } catch (error) {
-      await this.handleFailure(job, workerId, error, outboundToFail, inboundProcessing);
+      await this.handleFailure(job, workerId, error, outboundToFail, inboundProcessing, log);
     }
   }
 
@@ -124,6 +137,7 @@ export class ProcessJob {
     error: unknown,
     outboundId: string | undefined,
     inboundProcessing: boolean,
+    log: Logger,
   ): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     const terminal = job.attempts >= job.maxAttempts;
@@ -134,8 +148,9 @@ export class ProcessJob {
             backoffDelay(job.attempts, this.settings.backoffBaseMs, this.settings.backoffCapMs, this.settings.random()),
         );
 
+    let owned = false;
     await this.uow.run(async (tx) => {
-      const owned = await this.workerQueue.fail(tx, job.id, workerId, message, retryAt);
+      owned = await this.workerQueue.fail(tx, job.id, workerId, message, retryAt);
       if (!owned || !terminal) return;
       if (inboundProcessing) {
         await this.messages.markStatus(
@@ -150,5 +165,12 @@ export class ProcessJob {
       }
       await this.notifier.conversationChanged(tx, job.conversationId);
     });
+
+    if (!owned) return;
+    if (terminal) {
+      log.error({ event: 'job_failed', error: message });
+    } else {
+      log.warn({ event: 'job_retry_scheduled', attempt: job.attempts, retryAt: retryAt?.toISOString() });
+    }
   }
 }
