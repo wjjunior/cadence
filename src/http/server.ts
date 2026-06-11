@@ -4,12 +4,16 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { type ConversationRoutesDeps, registerConversationRoutes } from './routes/conversations.js';
 import { type EventRoutesDeps, registerEventRoutes } from './routes/events.js';
 import { type HealthRoutesDeps, registerHealthRoutes } from './routes/health.js';
+import { type SimulateRoutesDeps, registerSimulateRoutes } from './routes/simulate.js';
 import { type WebhookRoutesDeps, registerWebhookRoutes } from './routes/webhook.js';
 
 export type ServerDeps = ConversationRoutesDeps &
   WebhookRoutesDeps &
   EventRoutesDeps &
-  HealthRoutesDeps;
+  HealthRoutesDeps & {
+    // Present only in mock mode; the simulate route is otherwise absent (not just disabled).
+    simulate?: SimulateRoutesDeps | null;
+  };
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
   // SSE connections are long-lived and hijacked; without forceClose, app.close() would block on
@@ -22,5 +26,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerWebhookRoutes(app, deps);
   registerEventRoutes(app, deps);
   registerHealthRoutes(app, deps);
+  if (deps.simulate) registerSimulateRoutes(app, deps.simulate);
   return app;
 }

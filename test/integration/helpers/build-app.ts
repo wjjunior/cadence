@@ -22,7 +22,7 @@ export interface TestApp {
   heartbeats: DrizzleHeartbeatRepository;
 }
 
-export function buildTestApp(client: DbClient): TestApp {
+export function buildTestApp(client: DbClient, opts: { simulate?: boolean } = {}): TestApp {
   const conversations = new DrizzleConversationRepository(client.db);
   const messages = new DrizzleMessageRepository(client.db);
   const ingestInboundMessage = new IngestInboundMessage(
@@ -41,6 +41,7 @@ export function buildTestApp(client: DbClient): TestApp {
     eventBus: noopEventBus,
     heartbeatMs: 30_000,
     healthRepository: new PgHealthRepository(client.sql),
+    simulate: opts.simulate ? { ingestInboundMessage } : null,
   });
 
   return { app, heartbeats: new DrizzleHeartbeatRepository(client.db) };
