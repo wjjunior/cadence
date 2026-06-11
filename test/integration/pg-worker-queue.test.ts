@@ -136,12 +136,27 @@ describe('PgWorkerQueue.complete', () => {
     const jobId = await seedJob();
     await queue.claim('w1');
 
-    await client.db.transaction(async (txDb) => {
-      await queue.complete(asTx(txDb), jobId);
-    });
+    const owned = await client.db.transaction((txDb) => queue.complete(asTx(txDb), jobId, 'w1'));
 
+    expect(owned).toBe(true);
     const [row] = await sql<{ status: string }[]>`select status from jobs where id = ${jobId}`;
     expect(row?.status).toBe('completed');
+  });
+
+  it('should not complete a job another worker re-claimed after the lease was reaped', async () => {
+    const jobId = await seedJob();
+    await queue.claim('w1');
+    await sql`update jobs set status = 'pending', locked_by = null, lease_expires_at = null where id = ${jobId}`;
+    const reclaimed = await queue.claim('w2');
+    expect(reclaimed?.id).toBe(jobId);
+
+    const owned = await client.db.transaction((txDb) => queue.complete(asTx(txDb), jobId, 'w1'));
+
+    expect(owned).toBe(false);
+    const [row] = await sql<{ status: string; locked_by: string | null }[]>`
+      select status, locked_by from jobs where id = ${jobId}`;
+    expect(row?.status).toBe('running');
+    expect(row?.locked_by).toBe('w2');
   });
 });
 
@@ -152,7 +167,7 @@ describe('PgWorkerQueue.fail', () => {
     const retryAt = new Date(Date.now() + 30_000);
 
     await client.db.transaction(async (txDb) => {
-      await queue.fail(asTx(txDb), jobId, 'boom', retryAt);
+      await queue.fail(asTx(txDb), jobId, 'w1', 'boom', retryAt);
     });
 
     const [row] = await sql<{ status: string; next_run_at: string | Date; last_error: string }[]>`
@@ -167,13 +182,32 @@ describe('PgWorkerQueue.fail', () => {
     await queue.claim('w1');
 
     await client.db.transaction(async (txDb) => {
-      await queue.fail(asTx(txDb), jobId, 'poison', null);
+      await queue.fail(asTx(txDb), jobId, 'w1', 'poison', null);
     });
 
     const [row] = await sql<{ status: string; last_error: string }[]>`
       select status, last_error from jobs where id = ${jobId}`;
     expect(row?.status).toBe('failed');
     expect(row?.last_error).toBe('poison');
+  });
+
+  it('should not fail a job another worker re-claimed after the lease was reaped', async () => {
+    const jobId = await seedJob();
+    await queue.claim('w1');
+    await sql`update jobs set status = 'pending', locked_by = null, lease_expires_at = null where id = ${jobId}`;
+    const reclaimed = await queue.claim('w2');
+    expect(reclaimed?.id).toBe(jobId);
+
+    const owned = await client.db.transaction((txDb) =>
+      queue.fail(asTx(txDb), jobId, 'w1', 'stale', null),
+    );
+
+    expect(owned).toBe(false);
+    const [row] = await sql<{ status: string; locked_by: string | null; last_error: string | null }[]>`
+      select status, locked_by, last_error from jobs where id = ${jobId}`;
+    expect(row?.status).toBe('running');
+    expect(row?.locked_by).toBe('w2');
+    expect(row?.last_error).toBeNull();
   });
 
   it('should unblock the younger sibling once the older job reaches a terminal state', async () => {
@@ -185,7 +219,7 @@ describe('PgWorkerQueue.fail', () => {
     expect(await queue.claim('w2')).toBeNull();
 
     await client.db.transaction(async (txDb) => {
-      await queue.fail(asTx(txDb), older!.id, 'poison', null);
+      await queue.fail(asTx(txDb), older!.id, 'w1', 'poison', null);
     });
 
     expect((await queue.claim('w3'))?.id).toBe(younger);

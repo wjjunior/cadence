@@ -21,6 +21,8 @@ describe('loadConfig', () => {
     expect(config.JOB_MAX_ATTEMPTS).toBe(3);
     expect(config.LEASE_DURATION_MS).toBe(60_000);
     expect(config.RECONCILE_POLL_MS).toBe(5_000);
+    expect(config.BACKOFF_BASE_MS).toBe(1_000);
+    expect(config.BACKOFF_CAP_MS).toBe(60_000);
     expect(config.API_PORT).toBe(3000);
   });
 
@@ -99,6 +101,12 @@ describe('loadConfig', () => {
 
   it('should reject a reply delay window where the minimum exceeds the maximum', () => {
     expect(() => loadConfig({ REPLY_DELAY_MIN_MS: '20000', REPLY_DELAY_MAX_MS: '15000' })).toThrow(
+      ConfigValidationError,
+    );
+  });
+
+  it('should reject a backoff window where the base exceeds the cap', () => {
+    expect(() => loadConfig({ BACKOFF_BASE_MS: '60000', BACKOFF_CAP_MS: '1000' })).toThrow(
       ConfigValidationError,
     );
   });

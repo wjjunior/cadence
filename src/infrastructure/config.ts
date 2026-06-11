@@ -15,6 +15,8 @@ const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 // 60s lease is 4x the 15s worst-case processing time (design §5.1).
 const DEFAULT_LEASE_DURATION_MS = 60_000;
 const DEFAULT_RECONCILE_POLL_MS = 5_000;
+const DEFAULT_BACKOFF_BASE_MS = 1_000;
+const DEFAULT_BACKOFF_CAP_MS = 60_000;
 const DEFAULT_API_PORT = 3_000;
 
 const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;
@@ -44,6 +46,8 @@ const envSchema = z
     JOB_MAX_ATTEMPTS: positiveInt(DEFAULT_JOB_MAX_ATTEMPTS),
     LEASE_DURATION_MS: positiveInt(DEFAULT_LEASE_DURATION_MS),
     RECONCILE_POLL_MS: positiveInt(DEFAULT_RECONCILE_POLL_MS),
+    BACKOFF_BASE_MS: positiveInt(DEFAULT_BACKOFF_BASE_MS),
+    BACKOFF_CAP_MS: positiveInt(DEFAULT_BACKOFF_CAP_MS),
     API_PORT: positiveInt(DEFAULT_API_PORT),
     TWILIO_ACCOUNT_SID: optionalSecret(),
     TWILIO_AUTH_TOKEN: optionalSecret(),
@@ -55,6 +59,14 @@ const envSchema = z
         code: 'custom',
         path: ['REPLY_DELAY_MAX_MS'],
         message: 'REPLY_DELAY_MAX_MS must be greater than or equal to REPLY_DELAY_MIN_MS',
+      });
+    }
+
+    if (cfg.BACKOFF_BASE_MS > cfg.BACKOFF_CAP_MS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BACKOFF_CAP_MS'],
+        message: 'BACKOFF_CAP_MS must be greater than or equal to BACKOFF_BASE_MS',
       });
     }
 
