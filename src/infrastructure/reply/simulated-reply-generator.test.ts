@@ -47,6 +47,23 @@ describe('SimulatedReplyGenerator', () => {
     expect(slept).toEqual([500]);
   });
 
+  it('should map random uniformly across the inclusive integer range', async () => {
+    // span 3 → equal-width buckets [0,1/3)→0, [1/3,2/3)→1, [2/3,1)→2; 1 clamps to 2.
+    const cases: Array<[number, number]> = [
+      [0, 0],
+      [0.34, 1],
+      [0.5, 1],
+      [0.67, 2],
+      [0.999, 2],
+      [1, 2],
+    ];
+    for (const [r, expected] of cases) {
+      const { gen, slept } = makeGen({ minMs: 0, maxMs: 2 }, () => r);
+      await gen.generate(ctx('x'));
+      expect(slept).toEqual([expected]);
+    }
+  });
+
   it('should keep the delay within [minMs, maxMs] across a sweep of random values', async () => {
     for (const r of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.999, 1]) {
       const { gen, slept } = makeGen({ minMs: 3000, maxMs: 15000 }, () => r);

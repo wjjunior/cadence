@@ -21,7 +21,10 @@ export class SimulatedReplyGenerator implements ReplyGenerator {
   }
 
   async generate(ctx: Parameters<ReplyGenerator['generate']>[0]): Promise<{ body: string }> {
-    const delayMs = this.minMs + Math.round(this.random() * (this.maxMs - this.minMs));
+    // floor over an inclusive span is a uniform integer in [minMs, maxMs]; the
+    // clamp keeps it bound-safe if an injected random() ever returns exactly 1.
+    const span = this.maxMs - this.minMs;
+    const delayMs = this.minMs + Math.min(span, Math.floor(this.random() * (span + 1)));
     await this.sleep(delayMs);
     return {
       body: `Thanks for your message: "${ctx.inboundBody.trim()}". An agent will follow up shortly.`,
