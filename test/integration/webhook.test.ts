@@ -48,6 +48,7 @@ beforeAll(async () => {
     eventBus: { subscribe: () => () => {} },
     heartbeatMs: 15_000,
     healthRepository: new PgHealthRepository(client.sql),
+    smsProvider: 'mock',
   });
   await app.ready();
 });
