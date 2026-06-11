@@ -1,13 +1,13 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { type DbClient, createDbClient } from '../../src/infrastructure/db/client.js';
 import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 
 const UNIQUE_VIOLATION = '23505';
 const CHECK_VIOLATION = '23514';
 
 let container: StartedPostgreSqlContainer;
-let sql: ReturnType<typeof postgres>;
+let sql: DbClient['sql'];
 let seq = 0;
 const uniq = (): string => `${++seq}`;
 
@@ -15,12 +15,15 @@ beforeAll(async () => {
   container = await new PostgreSqlContainer('postgres:16').start();
   const url = container.getConnectionUri();
   await runMigrations(url);
-  sql = postgres(url, { max: 1 });
+  sql = createDbClient(url, { max: 1 }).sql;
 });
 
 afterAll(async () => {
-  await sql?.end();
-  await container?.stop();
+  try {
+    await sql?.end();
+  } finally {
+    await container?.stop();
+  }
 });
 
 async function newConversation(): Promise<string> {
@@ -44,7 +47,11 @@ async function newInboundMessage(conversationId: string, sid: string | null = nu
   return row.id;
 }
 
-async function expectSqlState(fn: () => Promise<unknown>, code: string): Promise<void> {
+async function expectSqlState(
+  fn: () => Promise<unknown>,
+  code: string,
+  constraintName?: string,
+): Promise<void> {
   let succeeded = false;
   let caught: unknown;
   try {
@@ -54,7 +61,11 @@ async function expectSqlState(fn: () => Promise<unknown>, code: string): Promise
     caught = error;
   }
   expect(succeeded, `expected SQLSTATE ${code} but the statement succeeded`).toBe(false);
-  expect((caught as { code?: string }).code).toBe(code);
+  const err = caught as { code?: string; constraint_name?: string };
+  expect(err.code, `unexpected error: ${String(caught)}`).toBe(code);
+  if (constraintName) {
+    expect(err.constraint_name).toBe(constraintName);
+  }
 }
 
 describe('schema migration', () => {
@@ -83,7 +94,11 @@ describe('idempotency constraints', () => {
   it('rejects a duplicate inbound provider_message_sid', async () => {
     const conversationId = await newConversation();
     await newInboundMessage(conversationId, 'SM-dup');
-    await expectSqlState(() => newInboundMessage(conversationId, 'SM-dup'), UNIQUE_VIOLATION);
+    await expectSqlState(
+      () => newInboundMessage(conversationId, 'SM-dup'),
+      UNIQUE_VIOLATION,
+      'messages_inbound_sid',
+    );
   });
 
   it('allows the same sid on an outbound row (the inbound index is partial)', async () => {
@@ -101,7 +116,7 @@ describe('idempotency constraints', () => {
       sql`insert into messages (conversation_id, direction, body, status, idempotency_key)
           values (${conversationId}, 'outbound', 'reply', 'queued', ${key})`;
     await insertOutbound('reply:abc');
-    await expectSqlState(() => insertOutbound('reply:abc'), UNIQUE_VIOLATION);
+    await expectSqlState(() => insertOutbound('reply:abc'), UNIQUE_VIOLATION, 'messages_outbound_key');
   });
 });
 
@@ -115,7 +130,11 @@ describe('per-conversation serialization', () => {
           values (${messageId}, ${conversationId}, ${status})`;
 
     await insertJob(m1, 'running');
-    await expectSqlState(() => insertJob(m2, 'running'), UNIQUE_VIOLATION);
+    await expectSqlState(
+      () => insertJob(m2, 'running'),
+      UNIQUE_VIOLATION,
+      'one_running_per_conversation',
+    );
   });
 
   it('allows multiple pending jobs for the same conversation', async () => {
@@ -139,6 +158,7 @@ describe('check constraints', () => {
         sql`insert into messages (conversation_id, direction, body, status)
             values (${conversationId}, 'sideways', 'x', 'received')`,
       CHECK_VIOLATION,
+      'messages_direction_check',
     );
   });
 
@@ -149,6 +169,7 @@ describe('check constraints', () => {
         sql`insert into messages (conversation_id, direction, body, status)
             values (${conversationId}, 'inbound', 'x', 'bogus')`,
       CHECK_VIOLATION,
+      'messages_status_check',
     );
   });
 
@@ -160,6 +181,7 @@ describe('check constraints', () => {
         sql`insert into jobs (inbound_message_id, conversation_id, status)
             values (${messageId}, ${conversationId}, 'bogus')`,
       CHECK_VIOLATION,
+      'jobs_status_check',
     );
   });
 });
