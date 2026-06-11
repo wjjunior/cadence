@@ -76,11 +76,6 @@ const form = (overrides: Record<string, string> = {}): string => {
   return new URLSearchParams(fields).toString();
 };
 
-async function messageCount(): Promise<number> {
-  const [row] = await sql<{ count: string }[]>`select count(*)::int as count from messages`;
-  return Number(row!.count);
-}
-
 async function rowCount(table: 'conversations' | 'messages' | 'jobs'): Promise<number> {
   const [row] = await sql<{ count: string }[]>`select count(*)::int as count from ${sql(table)}`;
   return Number(row!.count);
@@ -99,9 +94,8 @@ describe('POST /webhooks/twilio/sms', () => {
     expect(res.headers['content-type']).toContain('text/xml');
     expect(res.body).toBe('<Response/>');
 
-    expect(await messageCount()).toBe(1);
-    const [job] = await sql<{ count: string }[]>`select count(*)::int as count from jobs`;
-    expect(Number(job!.count)).toBe(1);
+    expect(await rowCount('messages')).toBe(1);
+    expect(await rowCount('jobs')).toBe(1);
   });
 
   it('should treat a redelivered MessageSid as a duplicate: identical ack, no new rows', async () => {
@@ -128,7 +122,7 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await messageCount()).toBe(0);
+    expect(await rowCount('messages')).toBe(0);
   });
 
   it('should reject a non-empty but malformed phone number with 400 and persist nothing', async () => {
@@ -141,6 +135,6 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await messageCount()).toBe(0);
+    expect(await rowCount('messages')).toBe(0);
   });
 });
