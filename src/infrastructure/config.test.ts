@@ -21,6 +21,11 @@ describe('loadConfig', () => {
     expect(config.JOB_MAX_ATTEMPTS).toBe(3);
     expect(config.LEASE_DURATION_MS).toBe(60_000);
     expect(config.RECONCILE_POLL_MS).toBe(5_000);
+    expect(config.API_PORT).toBe(3000);
+  });
+
+  it('should coerce an API_PORT override', () => {
+    expect(loadConfig({ API_PORT: '8080' }).API_PORT).toBe(8080);
   });
 
   it('should coerce numeric variables from their string env representation', () => {
