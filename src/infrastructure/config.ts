@@ -23,6 +23,7 @@ const DEFAULT_SSE_HEARTBEAT_MS = 15_000;
 const DEFAULT_METRICS_POLL_MS = 10_000;
 
 const logLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
+export type LogLevel = (typeof logLevels)[number];
 const DEFAULT_LOG_LEVEL = 'info';
 
 const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const;

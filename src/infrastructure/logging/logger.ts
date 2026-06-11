@@ -1,7 +1,9 @@
 import pino, { type Logger as PinoLogger } from 'pino';
 
+import type { LogLevel } from '../config.js';
+
 export interface CreateLoggerOptions {
-  level: string;
+  level: LogLevel;
   service: string;
 }
 
