@@ -115,3 +115,8 @@ export const webhookEvents = pgTable('webhook_events', {
   payload: jsonb().notNull(),
   receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const workerHeartbeats = pgTable('worker_heartbeats', {
+  workerId: text('worker_id').primaryKey(),
+  lastBeatAt: timestamp('last_beat_at', { withTimezone: true }).notNull().defaultNow(),
+});
