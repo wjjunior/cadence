@@ -1,12 +1,13 @@
 import { IngestInboundMessage } from '../application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../application/use-cases/list-conversations.js';
-import { loadConfig } from '../infrastructure/config.js';
+import { loadConfig, smsProvider } from '../infrastructure/config.js';
 import { createDbClient } from '../infrastructure/db/client.js';
 import { DrizzleUnitOfWork } from '../infrastructure/db/unit-of-work.js';
 import { PgEventBus } from '../infrastructure/events/pg-event-bus.js';
 import { createLogger } from '../infrastructure/logging/logger.js';
 import { DrizzleConversationRepository } from '../infrastructure/repositories/conversation-repository.js';
+import { PgHealthRepository } from '../infrastructure/repositories/health-repository.js';
 import { DrizzleJobEnqueuer } from '../infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../infrastructure/repositories/notifier.js';
@@ -41,6 +42,8 @@ async function main(): Promise<void> {
       eventBus,
       heartbeatMs: config.SSE_HEARTBEAT_MS,
       loggerInstance: logger,
+      healthRepository: new PgHealthRepository(sql),
+      simulate: config.SMS_PROVIDER === smsProvider.mock ? { ingestInboundMessage } : null,
     });
 
     app.addHook('onClose', async () => {
