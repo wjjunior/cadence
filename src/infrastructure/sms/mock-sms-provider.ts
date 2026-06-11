@@ -55,6 +55,6 @@ export class MockSmsProvider implements SmsProvider {
   }
 
   get sentMessages(): readonly SentMessage[] {
-    return this.sent;
+    return [...this.sent];
   }
 }
