@@ -76,9 +76,17 @@ const form = (overrides: Record<string, string> = {}): string => {
   return new URLSearchParams(fields).toString();
 };
 
-async function rowCount(table: 'conversations' | 'messages' | 'jobs'): Promise<number> {
-  const [row] = await sql<{ count: string }[]>`select count(*)::int as count from ${sql(table)}`;
-  return Number(row!.count);
+type Table = 'webhook_events' | 'conversations' | 'messages' | 'jobs';
+
+async function rowCount(table: Table): Promise<number> {
+  const [row] = await sql<{ count: number }[]>`select count(*)::int as count from ${sql(table)}`;
+  return row?.count ?? 0;
+}
+
+async function expectNothingPersisted(): Promise<void> {
+  for (const table of ['webhook_events', 'conversations', 'messages', 'jobs'] as const) {
+    expect(await rowCount(table)).toBe(0);
+  }
 }
 
 describe('POST /webhooks/twilio/sms', () => {
@@ -122,7 +130,7 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await rowCount('messages')).toBe(0);
+    await expectNothingPersisted();
   });
 
   it('should reject a non-empty but malformed phone number with 400 and persist nothing', async () => {
@@ -135,6 +143,6 @@ describe('POST /webhooks/twilio/sms', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json<{ error: string }>().error).toBeTruthy();
-    expect(await rowCount('messages')).toBe(0);
+    await expectNothingPersisted();
   });
 });

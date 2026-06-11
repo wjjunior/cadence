@@ -19,6 +19,7 @@ import { silentLogger } from '../helpers/silent-logger.js';
 
 const FORM_HEADERS = { 'content-type': 'application/x-www-form-urlencoded' };
 const LEASE_MS = 60_000;
+const MESSAGE_SID = 'SMdurability00000000000000000000001';
 
 let container: StartedPostgreSqlContainer;
 let client: DbClient;
@@ -31,7 +32,7 @@ const webhookForm = (): string =>
     From: '+15550001234',
     To: '+15559876543',
     Body: 'hello there',
-    MessageSid: 'SMdurability00000000000000000000001',
+    MessageSid: MESSAGE_SID,
   }).toString();
 
 beforeAll(async () => {
@@ -85,7 +86,7 @@ describe('ingestion durability (accepted webhook → claimable job)', () => {
     expect(ack.statusCode).toBe(200);
 
     const [inbound] = await sql<{ id: string; conversation_id: string }[]>`
-      select id, conversation_id from messages where direction = 'inbound'`;
+      select id, conversation_id from messages where provider_message_sid = ${MESSAGE_SID}`;
     expect(inbound).toBeDefined();
 
     const claimed = await queue.claim('worker-durability');
