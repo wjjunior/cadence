@@ -94,14 +94,34 @@ describe('IngestInboundMessage', () => {
     expect(await countRows('jobs')).toBe(0);
   });
 
-  it('should emit job_created only after the transaction commits', async () => {
+  it('should deliver job_created after the transaction commits', async () => {
+    let onNotify: (payload: string) => void = () => {};
+    const arrived = new Promise<string>((resolve) => {
+      onNotify = resolve;
+    });
+    const listener = await client.sql.listen('job_created', (payload) => onNotify(payload));
+    await ingest.execute(command, rawPayload);
+    const timeout = setTimeout(() => onNotify('__timeout__'), 2000);
+    const payload = await arrived;
+    clearTimeout(timeout);
+    await listener.unlisten();
+    expect(payload).toBe('');
+  });
+
+  it('should not deliver job_created when the transaction rolls back', async () => {
     const received: string[] = [];
     const listener = await client.sql.listen('job_created', (payload) => {
       received.push(payload);
     });
-    await ingest.execute(command, rawPayload);
+    const notifier = new PgNotifier();
+    await expect(
+      uow.run(async (tx) => {
+        await notifier.jobCreated(tx);
+        throw new Error('rollback');
+      }),
+    ).rejects.toThrow('rollback');
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(received).toHaveLength(1);
+    expect(received).toHaveLength(0);
     await listener.unlisten();
   });
 });
