@@ -50,18 +50,19 @@ function makeProcessJob(generator: ReplyGenerator): ProcessJob {
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const pad = (n: number): string => String(n).padStart(7, '0');
 
-// A true barrier: poll until a backend is genuinely waiting on a lock, so the
-// write-skew test commits the first transaction only once the second is blocked —
-// no timing guess.
-async function waitUntilLockWaiting(): Promise<void> {
+// A true barrier: poll until the specific backend (by pid) is genuinely waiting on
+// a lock, so the write-skew test commits the first transaction only once the second
+// is blocked — no timing guess, and scoped to our connection so an unrelated
+// lock-waiter can never release it early.
+async function waitUntilLockWaiting(pid: number): Promise<void> {
   for (let attempt = 0; attempt < 200; attempt++) {
-    const rows = await sql<{ waiting: number }[]>`
-      select count(*)::int as waiting from pg_stat_activity
-      where wait_event_type = 'Lock' and state = 'active'`;
-    if ((rows[0]?.waiting ?? 0) > 0) return;
+    const rows = await sql<{ pid: number }[]>`
+      select pid from pg_stat_activity
+      where pid = ${pid} and wait_event_type = 'Lock' and state = 'active'`;
+    if (rows.length > 0) return;
     await sleep(10);
   }
-  throw new Error('the second transaction never reached the lock-waiting state');
+  throw new Error('the competing transaction never reached the lock-waiting state');
 }
 
 async function newConversation(): Promise<string> {
@@ -155,12 +156,14 @@ describe('worker invariants', () => {
       await c1`update jobs set status = 'running', locked_by = 'w1', lease_expires_at = now() + interval '60 seconds' where id = ${j1.jobId}`;
 
       await c2`begin`;
+      // Captured before the blocking update so the barrier can target this backend.
+      const c2Pid = (await c2<{ pid: number }[]>`select pg_backend_pid() as pid`)[0]!.pid;
       // Blocks on the one_running_per_conversation unique index until c1 resolves.
       const c2Attempt = c2`update jobs set status = 'running', locked_by = 'w2', lease_expires_at = now() + interval '60 seconds' where id = ${j2.jobId}`
         .then(() => null as { code?: string; constraint_name?: string } | null)
         .catch((error: { code?: string; constraint_name?: string }) => error);
 
-      await waitUntilLockWaiting(); // release the barrier only once c2 is truly blocked
+      await waitUntilLockWaiting(c2Pid); // release the barrier only once c2 is truly blocked
       await c1`commit`;
       c1Committed = true;
 
