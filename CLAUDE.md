@@ -8,7 +8,7 @@ The guiding principle behind every decision: **boring, reliable technology with 
 
 ## Stack
 
-**Backend:** TypeScript 5.4+ (strict), Node 22 LTS, Fastify, Drizzle ORM over PostgreSQL 16 via the **postgres.js** driver (the `postgres` package, wired through `drizzle-orm/postgres-js`), `pino` for structured JSON logs. Zod for all boundary validation. PostgreSQL is **both** the system of record **and** the durable job queue — there is no Redis, no broker, no second stateful system.
+**Backend:** TypeScript 5.4+ (strict), Node 24 LTS (the project tracks the latest Node LTS), Fastify, Drizzle ORM over PostgreSQL 16 via the **postgres.js** driver (the `postgres` package, wired through `drizzle-orm/postgres-js`), `pino` for structured JSON logs. Zod for all boundary validation. PostgreSQL is **both** the system of record **and** the durable job queue — there is no Redis, no broker, no second stateful system.
 
 **Frontend:** React 19, Vite, TanStack Query v5, native `EventSource` for SSE. Minimal and structured — the brief deprioritizes UI polish; status clarity and live updates only.
 
@@ -51,7 +51,7 @@ The structure should visibly come from the design, not from a framework. Fastify
 - `http/` is thin: validate → delegate to a use case → serialize. Zero business logic in route handlers (enforced by the PR review checklist).
 - `entrypoints/` are composition roots — the only place that wires concrete adapters to use cases.
 
-Reverse imports are forbidden via `import/no-restricted-paths`.
+Reverse imports are forbidden by scoped `no-restricted-imports` rules per layer in the ESLint flat config (a lint boundary kept deliberately free of an extra import-resolver plugin — fewer moving parts).
 
 ## The reliability core
 

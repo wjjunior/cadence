@@ -1,0 +1,38 @@
+{
+  "name": "cadence",
+  "version": "0.1.0",
+  "description": "Durable, idempotent conversational SMS pipeline with per-conversation ordering guarantees",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@11.0.4",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:api": "tsx watch src/entrypoints/api.ts",
+    "dev:worker": "tsx watch src/entrypoints/worker.ts",
+    "start:api": "node dist/entrypoints/api.js",
+    "start:worker": "node dist/entrypoints/worker.js",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^9.1.0",
+    "lefthook": "^1.10.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.0"
+  }
+}
