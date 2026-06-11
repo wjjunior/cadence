@@ -36,7 +36,7 @@ export class WorkerRuntime {
       () => this.wake(),
       () => this.wake(),
     );
-    this.pollTimer = setInterval(() => void this.reapAndWake(), this.deps.reconcilePollMs);
+    this.pollTimer = setInterval(() => void this.reconcile(), this.deps.reconcilePollMs);
     for (let i = 0; i < this.deps.concurrency; i++) {
       this.runners.push(this.runLoop(`${this.deps.workerId}-${i}`));
     }
@@ -57,7 +57,9 @@ export class WorkerRuntime {
     this.runners = [];
   }
 
-  private async reapAndWake(): Promise<void> {
+  // The reconciliation poll tick: reclaim abandoned leases, then wake runners to
+  // re-sweep — the durability backstop for any NOTIFY that was lost.
+  private async reconcile(): Promise<void> {
     try {
       await this.deps.queue.reapExpiredLeases();
     } catch (error) {
