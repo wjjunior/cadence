@@ -92,24 +92,22 @@ export class PgWorkerQueue implements WorkerQueue {
     return null;
   }
 
-  async complete(tx: Tx, jobId: string, workerId: string): Promise<void> {
-    await asDrizzle(tx)
+  async complete(tx: Tx, jobId: string, workerId: string): Promise<boolean> {
+    const rows = await asDrizzle(tx)
       .update(jobs)
       .set({ status: jobStatus.completed })
-      .where(and(eq(jobs.id, jobId), eq(jobs.lockedBy, workerId)));
+      .where(and(eq(jobs.id, jobId), eq(jobs.lockedBy, workerId)))
+      .returning({ id: jobs.id });
+    return rows.length > 0;
   }
 
-  async fail(tx: Tx, jobId: string, workerId: string, error: string, retryAt: Date | null): Promise<void> {
+  async fail(tx: Tx, jobId: string, workerId: string, error: string, retryAt: Date | null): Promise<boolean> {
     const owned = and(eq(jobs.id, jobId), eq(jobs.lockedBy, workerId));
-    const d = asDrizzle(tx);
-    if (retryAt) {
-      await d
-        .update(jobs)
-        .set({ status: jobStatus.pending, nextRunAt: retryAt, lastError: error })
-        .where(owned);
-      return;
-    }
-    await d.update(jobs).set({ status: jobStatus.failed, lastError: error }).where(owned);
+    const set = retryAt
+      ? { status: jobStatus.pending, nextRunAt: retryAt, lastError: error }
+      : { status: jobStatus.failed, lastError: error };
+    const rows = await asDrizzle(tx).update(jobs).set(set).where(owned).returning({ id: jobs.id });
+    return rows.length > 0;
   }
 
   async reapExpiredLeases(): Promise<number> {

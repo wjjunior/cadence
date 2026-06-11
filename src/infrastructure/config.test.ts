@@ -99,6 +99,12 @@ describe('loadConfig', () => {
       ConfigValidationError,
     );
   });
+
+  it('should reject a backoff window where the base exceeds the cap', () => {
+    expect(() => loadConfig({ BACKOFF_BASE_MS: '60000', BACKOFF_CAP_MS: '1000' })).toThrow(
+      ConfigValidationError,
+    );
+  });
 });
 
 describe('loadDatabaseUrl', () => {

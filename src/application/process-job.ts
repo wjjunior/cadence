@@ -102,13 +102,14 @@ export class ProcessJob {
       });
 
       await this.uow.run(async (tx) => {
+        const owned = await this.workerQueue.complete(tx, job.id, workerId);
+        if (!owned) return;
         await this.messages.markStatus(tx, outbound.id, walkOutbound(outboundStatus.sent));
         await this.messages.markStatus(
           tx,
           inbound.id,
           transitionInbound(inboundStatus.processing, inboundStatus.processed),
         );
-        await this.workerQueue.complete(tx, job.id, workerId);
         await this.conversations.touch(tx, job.conversationId);
         await this.notifier.conversationChanged(tx, job.conversationId);
       });
@@ -134,8 +135,8 @@ export class ProcessJob {
         );
 
     await this.uow.run(async (tx) => {
-      await this.workerQueue.fail(tx, job.id, workerId, message, retryAt);
-      if (!terminal) return;
+      const owned = await this.workerQueue.fail(tx, job.id, workerId, message, retryAt);
+      if (!owned || !terminal) return;
       if (inboundProcessing) {
         await this.messages.markStatus(
           tx,

@@ -176,6 +176,34 @@ describe('ProcessJob', () => {
     expect(outbound[0]?.status).toBe('failed');
   });
 
+  it('should not commit a sent reply when the lease was lost before the terminal commit', async () => {
+    const job = await seedClaimedJob();
+    await client.sql`update jobs set locked_by = 'w2' where id = ${job.id}`;
+
+    await makeProcessJob(fastGenerator).execute(job);
+
+    expect(await messageStatus(job.inboundMessageId)).toBe('processing');
+    const outbound = await client.sql<{ status: string }[]>`
+      select status from messages where direction = 'outbound' and in_reply_to = ${job.inboundMessageId}`;
+    expect(outbound[0]?.status).toBe('queued');
+    expect((await jobRow(job.id)).status).toBe('running');
+  });
+
+  it('should not mark messages failed when the lease was lost before a terminal failure', async () => {
+    sms.failAlways();
+    const seeded = await seedClaimedJob();
+    await client.sql`update jobs set attempts = max_attempts, locked_by = 'w2' where id = ${seeded.id}`;
+    const job = { ...seeded, attempts: seeded.maxAttempts };
+
+    await makeProcessJob(fastGenerator).execute(job);
+
+    expect(await messageStatus(job.inboundMessageId)).toBe('processing');
+    const outbound = await client.sql<{ status: string }[]>`
+      select status from messages where direction = 'outbound' and in_reply_to = ${job.inboundMessageId}`;
+    expect(outbound[0]?.status).toBe('queued');
+    expect((await jobRow(job.id)).status).toBe('running');
+  });
+
   it('should fail a prior-attempt outbound when the terminal attempt throws before recreating it', async () => {
     const seeded = await seedClaimedJob();
     await uow.run((tx) =>

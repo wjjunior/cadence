@@ -136,10 +136,9 @@ describe('PgWorkerQueue.complete', () => {
     const jobId = await seedJob();
     await queue.claim('w1');
 
-    await client.db.transaction(async (txDb) => {
-      await queue.complete(asTx(txDb), jobId, 'w1');
-    });
+    const owned = await client.db.transaction((txDb) => queue.complete(asTx(txDb), jobId, 'w1'));
 
+    expect(owned).toBe(true);
     const [row] = await sql<{ status: string }[]>`select status from jobs where id = ${jobId}`;
     expect(row?.status).toBe('completed');
   });
@@ -151,10 +150,9 @@ describe('PgWorkerQueue.complete', () => {
     const reclaimed = await queue.claim('w2');
     expect(reclaimed?.id).toBe(jobId);
 
-    await client.db.transaction(async (txDb) => {
-      await queue.complete(asTx(txDb), jobId, 'w1');
-    });
+    const owned = await client.db.transaction((txDb) => queue.complete(asTx(txDb), jobId, 'w1'));
 
+    expect(owned).toBe(false);
     const [row] = await sql<{ status: string; locked_by: string | null }[]>`
       select status, locked_by from jobs where id = ${jobId}`;
     expect(row?.status).toBe('running');
@@ -200,10 +198,11 @@ describe('PgWorkerQueue.fail', () => {
     const reclaimed = await queue.claim('w2');
     expect(reclaimed?.id).toBe(jobId);
 
-    await client.db.transaction(async (txDb) => {
-      await queue.fail(asTx(txDb), jobId, 'w1', 'stale', null);
-    });
+    const owned = await client.db.transaction((txDb) =>
+      queue.fail(asTx(txDb), jobId, 'w1', 'stale', null),
+    );
 
+    expect(owned).toBe(false);
     const [row] = await sql<{ status: string; locked_by: string | null; last_error: string | null }[]>`
       select status, locked_by, last_error from jobs where id = ${jobId}`;
     expect(row?.status).toBe('running');

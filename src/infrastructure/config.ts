@@ -60,6 +60,14 @@ const envSchema = z
       });
     }
 
+    if (cfg.BACKOFF_BASE_MS > cfg.BACKOFF_CAP_MS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BACKOFF_CAP_MS'],
+        message: 'BACKOFF_CAP_MS must be greater than or equal to BACKOFF_BASE_MS',
+      });
+    }
+
     if (cfg.SMS_PROVIDER !== smsProvider.twilio) return;
 
     for (const key of twilioKeys) {
