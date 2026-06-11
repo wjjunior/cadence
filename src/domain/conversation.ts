@@ -3,6 +3,14 @@ export interface ConversationKey {
   systemPhone: string;
 }
 
+export interface Conversation {
+  id: string;
+  userPhone: string;
+  systemPhone: string;
+  lastMessageAt: Date | null;
+  createdAt: Date;
+}
+
 export class InvalidPhoneNumberError extends Error {}
 
 const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
