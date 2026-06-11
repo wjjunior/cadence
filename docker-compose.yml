@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cadence-postgres
+    environment:
+      POSTGRES_USER: cadence
+      POSTGRES_PASSWORD: cadence
+      POSTGRES_DB: cadence
+    # Bound to loopback only — never exposed beyond localhost. Host port 5433
+    # avoids colliding with a Postgres already running on the default 5432.
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - cadence-pgdata:/var/lib/postgresql/data
+    # -h 127.0.0.1 forces a TCP check so the probe only reports healthy once the
+    # real server is listening, not during the init-phase bootstrap server that
+    # only accepts the Unix socket (avoids a fresh-volume race with db:migrate).
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cadence -d cadence -h 127.0.0.1']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  cadence-pgdata:
