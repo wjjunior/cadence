@@ -25,7 +25,7 @@ export type ServerDeps = ConversationRoutesDeps &
     adminDir?: string;
   };
 
-const API_PREFIXES = ['/api', '/dev', '/health', '/webhooks'];
+const apiPrefixes = ['/api', '/dev', '/health', '/webhooks'] as const;
 
 // Serve the built SPA: real files (index.html, /assets/*) are served by @fastify/static; any other
 // GET that isn't an API path falls back to index.html so client-side routes (/c/:id) and refreshes
@@ -33,7 +33,7 @@ const API_PREFIXES = ['/api', '/dev', '/health', '/webhooks'];
 function registerAdminSpa(app: FastifyInstance, adminDir: string): void {
   app.register(fastifyStatic, { root: adminDir, wildcard: false });
   app.setNotFoundHandler((request, reply) => {
-    if (request.method === 'GET' && !API_PREFIXES.some((prefix) => request.url.startsWith(prefix))) {
+    if (request.method === 'GET' && !apiPrefixes.some((prefix) => request.url.startsWith(prefix))) {
       return reply.type('text/html').sendFile('index.html');
     }
     return reply.code(404).send(errorResponse('not found'));
