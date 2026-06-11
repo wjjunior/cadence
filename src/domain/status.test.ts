@@ -1,39 +1,39 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  INBOUND_STATUS,
+  inboundStatus,
   type InboundStatus,
   InvalidStatusTransitionError,
-  OUTBOUND_STATUS,
+  outboundStatus,
   type OutboundStatus,
   transitionInbound,
   transitionOutbound,
 } from './status.js';
 
-const INBOUND_STATES: InboundStatus[] = [
-  INBOUND_STATUS.received,
-  INBOUND_STATUS.processing,
-  INBOUND_STATUS.processed,
-  INBOUND_STATUS.failed,
+const inboundStates: InboundStatus[] = [
+  inboundStatus.received,
+  inboundStatus.processing,
+  inboundStatus.processed,
+  inboundStatus.failed,
 ];
 
-const OUTBOUND_STATES: OutboundStatus[] = [
-  OUTBOUND_STATUS.queued,
-  OUTBOUND_STATUS.sending,
-  OUTBOUND_STATUS.sent,
-  OUTBOUND_STATUS.failed,
+const outboundStates: OutboundStatus[] = [
+  outboundStatus.queued,
+  outboundStatus.sending,
+  outboundStatus.sent,
+  outboundStatus.failed,
 ];
 
-const VALID_INBOUND_EDGES: ReadonlyArray<[InboundStatus, InboundStatus]> = [
-  [INBOUND_STATUS.received, INBOUND_STATUS.processing],
-  [INBOUND_STATUS.processing, INBOUND_STATUS.processed],
-  [INBOUND_STATUS.processing, INBOUND_STATUS.failed],
+const validInboundEdges: ReadonlyArray<[InboundStatus, InboundStatus]> = [
+  [inboundStatus.received, inboundStatus.processing],
+  [inboundStatus.processing, inboundStatus.processed],
+  [inboundStatus.processing, inboundStatus.failed],
 ];
 
-const VALID_OUTBOUND_EDGES: ReadonlyArray<[OutboundStatus, OutboundStatus]> = [
-  [OUTBOUND_STATUS.queued, OUTBOUND_STATUS.sending],
-  [OUTBOUND_STATUS.sending, OUTBOUND_STATUS.sent],
-  [OUTBOUND_STATUS.sending, OUTBOUND_STATUS.failed],
+const validOutboundEdges: ReadonlyArray<[OutboundStatus, OutboundStatus]> = [
+  [outboundStatus.queued, outboundStatus.sending],
+  [outboundStatus.sending, outboundStatus.sent],
+  [outboundStatus.sending, outboundStatus.failed],
 ];
 
 const isValid = <S>(edges: ReadonlyArray<[S, S]>, from: S, to: S): boolean =>
@@ -43,14 +43,14 @@ const allEdges = <S>(states: readonly S[]): Array<[S, S]> =>
   states.flatMap((from) => states.map((to): [S, S] => [from, to]));
 
 describe('transitionInbound', () => {
-  for (const [from, to] of VALID_INBOUND_EDGES) {
+  for (const [from, to] of validInboundEdges) {
     it(`should return ${to} for the valid edge ${from} -> ${to}`, () => {
       expect(transitionInbound(from, to)).toBe(to);
     });
   }
 
-  for (const [from, to] of allEdges(INBOUND_STATES)) {
-    if (isValid(VALID_INBOUND_EDGES, from, to)) continue;
+  for (const [from, to] of allEdges(inboundStates)) {
+    if (isValid(validInboundEdges, from, to)) continue;
     it(`should throw on the invalid edge ${from} -> ${to}`, () => {
       expect(() => transitionInbound(from, to)).toThrow(InvalidStatusTransitionError);
     });
@@ -58,27 +58,27 @@ describe('transitionInbound', () => {
 
   it('should expose from, to and direction on the thrown error', () => {
     try {
-      transitionInbound(INBOUND_STATUS.processed, INBOUND_STATUS.processing);
+      transitionInbound(inboundStatus.processed, inboundStatus.processing);
       expect.unreachable('expected transitionInbound to throw');
     } catch (error) {
       expect(error).toBeInstanceOf(InvalidStatusTransitionError);
       const typed = error as InvalidStatusTransitionError;
-      expect(typed.from).toBe(INBOUND_STATUS.processed);
-      expect(typed.to).toBe(INBOUND_STATUS.processing);
+      expect(typed.from).toBe(inboundStatus.processed);
+      expect(typed.to).toBe(inboundStatus.processing);
       expect(typed.direction).toBe('inbound');
     }
   });
 });
 
 describe('transitionOutbound', () => {
-  for (const [from, to] of VALID_OUTBOUND_EDGES) {
+  for (const [from, to] of validOutboundEdges) {
     it(`should return ${to} for the valid edge ${from} -> ${to}`, () => {
       expect(transitionOutbound(from, to)).toBe(to);
     });
   }
 
-  for (const [from, to] of allEdges(OUTBOUND_STATES)) {
-    if (isValid(VALID_OUTBOUND_EDGES, from, to)) continue;
+  for (const [from, to] of allEdges(outboundStates)) {
+    if (isValid(validOutboundEdges, from, to)) continue;
     it(`should throw on the invalid edge ${from} -> ${to}`, () => {
       expect(() => transitionOutbound(from, to)).toThrow(InvalidStatusTransitionError);
     });
@@ -86,13 +86,13 @@ describe('transitionOutbound', () => {
 
   it('should expose from, to and direction on the thrown error', () => {
     try {
-      transitionOutbound(OUTBOUND_STATUS.sent, OUTBOUND_STATUS.sending);
+      transitionOutbound(outboundStatus.sent, outboundStatus.sending);
       expect.unreachable('expected transitionOutbound to throw');
     } catch (error) {
       expect(error).toBeInstanceOf(InvalidStatusTransitionError);
       const typed = error as InvalidStatusTransitionError;
-      expect(typed.from).toBe(OUTBOUND_STATUS.sent);
-      expect(typed.to).toBe(OUTBOUND_STATUS.sending);
+      expect(typed.from).toBe(outboundStatus.sent);
+      expect(typed.to).toBe(outboundStatus.sending);
       expect(typed.direction).toBe('outbound');
     }
   });
