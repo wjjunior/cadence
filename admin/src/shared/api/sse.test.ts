@@ -4,6 +4,8 @@ import { FakeEventSource } from '@/test/fake-event-source';
 
 import { type ConversationChangedSseEvent, type SseStatus, connectEvents } from './index';
 
+const CID = 'c0000000-0000-4000-8000-000000000001';
+
 beforeEach(() => {
   FakeEventSource.reset();
   vi.stubGlobal('EventSource', FakeEventSource);
@@ -19,10 +21,10 @@ describe('connectEvents', () => {
     connectEvents('/api/events', { onEvent: (e) => received.push(e), onStatus: () => {} });
 
     FakeEventSource.last().emitMessage(
-      JSON.stringify({ type: 'conversation.changed', conversationId: 'c1' }),
+      JSON.stringify({ type: 'conversation.changed', conversationId: CID }),
     );
 
-    expect(received).toEqual([{ type: 'conversation.changed', conversationId: 'c1' }]);
+    expect(received).toEqual([{ type: 'conversation.changed', conversationId: CID }]);
   });
 
   it('should ignore malformed json and wrong-shape payloads', () => {

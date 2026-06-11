@@ -24,14 +24,15 @@ describe('useLiveUpdates', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
+    const cid = 'c0000000-0000-4000-8000-000000000009';
     renderHook(() => useLiveUpdates(), { wrapper });
     act(() => {
       FakeEventSource.last().emitMessage(
-        JSON.stringify({ type: 'conversation.changed', conversationId: 'abc' }),
+        JSON.stringify({ type: 'conversation.changed', conversationId: cid }),
       );
     });
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['conversation', 'abc', 'messages'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['conversation', cid, 'messages'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['conversations'] });
   });
 

@@ -17,7 +17,7 @@ export const messageDtoSchema = z.object({
   body: z.string(),
   status: z.enum(messageStatuses),
   errorDetail: z.string().nullable(),
-  createdAt: z.string(),
+  createdAt: z.iso.datetime(),
 });
 export type MessageDto = z.infer<typeof messageDtoSchema>;
 export type MessageStatus = MessageDto['status'];
@@ -27,8 +27,8 @@ export const conversationSummarySchema = z.object({
   id: z.string(),
   userPhone: z.string(),
   systemPhone: z.string(),
-  lastMessageAt: z.string(),
-  createdAt: z.string(),
+  lastMessageAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 
@@ -45,7 +45,7 @@ export type ConversationListPage = z.infer<typeof conversationListPageSchema>;
 
 export const conversationChangedSseEventSchema = z.object({
   type: z.literal('conversation.changed'),
-  conversationId: z.string(),
+  conversationId: z.uuid(),
 });
 export type ConversationChangedSseEvent = z.infer<typeof conversationChangedSseEventSchema>;
 

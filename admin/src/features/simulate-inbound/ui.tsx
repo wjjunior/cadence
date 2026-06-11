@@ -29,7 +29,7 @@ export function SimulateForm() {
         onChange={(e) => setBody(e.target.value)}
         placeholder="Type an inbound message…"
       />
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button type="submit" disabled={mutation.isPending || !from.trim() || !body.trim()}>
         {mutation.isPending ? 'Sending…' : 'Simulate inbound'}
       </Button>
       {mutation.isError && <p className="text-xs text-destructive">Failed to simulate.</p>}
