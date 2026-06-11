@@ -30,6 +30,18 @@ describe('PgEventBus', () => {
     expect(listen).toHaveBeenCalledTimes(1);
   });
 
+  it('should unlisten even when close races an in-flight start', async () => {
+    const unlisten = vi.fn(() => Promise.resolve());
+    const listen = vi.fn(() => Promise.resolve({ unlisten }));
+    const bus = new PgEventBus({ listen } as unknown as DbClient['sql']);
+
+    const starting = bus.start();
+    await bus.close();
+    await starting;
+
+    expect(unlisten).toHaveBeenCalledTimes(1);
+  });
+
   it('should keep notifying other subscribers when one listener throws', async () => {
     const { sql, emit } = fakeSql();
     const bus = new PgEventBus(sql);

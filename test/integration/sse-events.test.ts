@@ -2,6 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { IngestInboundMessage } from '../../src/application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../../src/application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../../src/application/use-cases/list-conversations.js';
 import { type DbClient, createDbClient } from '../../src/infrastructure/db/client.js';
@@ -9,9 +10,11 @@ import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 import { DrizzleUnitOfWork } from '../../src/infrastructure/db/unit-of-work.js';
 import { PgEventBus } from '../../src/infrastructure/events/pg-event-bus.js';
 import { DrizzleConversationRepository } from '../../src/infrastructure/repositories/conversation-repository.js';
+import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-enqueuer.js';
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
-import { buildServer } from '../../src/http/server.js';
+import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
+import { type ServerDeps, buildServer } from '../../src/http/server.js';
 
 const HEARTBEAT_MS = 80;
 const CID = 'c0000000-0000-4000-8000-000000000001';
@@ -111,16 +114,28 @@ beforeAll(async () => {
   bus = new PgEventBus(client.sql);
   await bus.start();
 
-  const conversations = new DrizzleConversationRepository(client.db);
-  const messages = new DrizzleMessageRepository(client.db);
-  app = buildServer({
-    listConversations: new ListConversations(conversations),
-    getConversationDetail: new GetConversationDetail(conversations, messages),
-    eventBus: bus,
-    heartbeatMs: HEARTBEAT_MS,
-  });
+  app = buildServer(makeServerDeps());
   base = await app.listen({ port: 0, host: '127.0.0.1' });
 });
+
+function makeServerDeps(): ServerDeps {
+  const conversations = new DrizzleConversationRepository(client.db);
+  const messages = new DrizzleMessageRepository(client.db);
+  return {
+    listConversations: new ListConversations(conversations),
+    getConversationDetail: new GetConversationDetail(conversations, messages),
+    ingestInboundMessage: new IngestInboundMessage(
+      uow,
+      new DrizzleWebhookEventRepository(),
+      conversations,
+      messages,
+      new DrizzleJobEnqueuer(),
+      notifier,
+    ),
+    eventBus: bus,
+    heartbeatMs: HEARTBEAT_MS,
+  };
+}
 
 afterAll(async () => {
   await app?.close();
@@ -163,14 +178,7 @@ describe('GET /api/events', () => {
   });
 
   it('should close the server even while a client is still connected', async () => {
-    const conversations = new DrizzleConversationRepository(client.db);
-    const messages = new DrizzleMessageRepository(client.db);
-    const extra = buildServer({
-      listConversations: new ListConversations(conversations),
-      getConversationDetail: new GetConversationDetail(conversations, messages),
-      eventBus: bus,
-      heartbeatMs: HEARTBEAT_MS,
-    });
+    const extra = buildServer(makeServerDeps());
     const addr = await extra.listen({ port: 0, host: '127.0.0.1' });
     const c = new SseClient();
     await c.connect(`${addr}/api/events`);

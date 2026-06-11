@@ -45,6 +45,14 @@ export class PgEventBus implements EventBus {
   }
 
   async close(): Promise<void> {
+    const pending = this.starting;
+    if (pending) {
+      try {
+        await pending;
+      } catch {
+        // start failed; there is no listener to unlisten
+      }
+    }
     const current = this.listener;
     this.listener = null;
     this.subscribers.clear();

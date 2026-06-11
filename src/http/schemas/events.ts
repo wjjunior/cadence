@@ -4,7 +4,7 @@ import type { ConversationChangedEvent } from '../../application/ports/event-bus
 
 export const conversationChangedSseEvent = z.object({
   type: z.literal('conversation.changed'),
-  conversationId: z.string(),
+  conversationId: z.uuid(),
 });
 
 export type ConversationChangedSseEvent = z.infer<typeof conversationChangedSseEvent>;
