@@ -81,6 +81,11 @@ async function messageCount(): Promise<number> {
   return Number(row!.count);
 }
 
+async function rowCount(table: 'conversations' | 'messages' | 'jobs'): Promise<number> {
+  const [row] = await sql<{ count: string }[]>`select count(*)::int as count from ${sql(table)}`;
+  return Number(row!.count);
+}
+
 describe('POST /webhooks/twilio/sms', () => {
   it('should ack with 200 text/xml <Response/> and persist one message and job', async () => {
     const res = await app.inject({
@@ -105,10 +110,12 @@ describe('POST /webhooks/twilio/sms', () => {
     const first = await app.inject({ method: 'POST', url: '/webhooks/twilio/sms', headers: FORM_HEADERS, payload });
     const second = await app.inject({ method: 'POST', url: '/webhooks/twilio/sms', headers: FORM_HEADERS, payload });
 
-    expect(first.body).toBe('<Response/>');
     expect(second.statusCode).toBe(200);
-    expect(second.body).toBe('<Response/>');
-    expect(await messageCount()).toBe(1);
+    expect(first.body).toBe('<Response/>');
+    expect(second.body).toBe(first.body);
+    expect(await rowCount('conversations')).toBe(1);
+    expect(await rowCount('messages')).toBe(1);
+    expect(await rowCount('jobs')).toBe(1);
   });
 
   it('should reject a malformed payload with 400 and persist nothing', async () => {
