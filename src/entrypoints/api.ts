@@ -43,6 +43,7 @@ async function main(): Promise<void> {
       heartbeatMs: config.SSE_HEARTBEAT_MS,
       loggerInstance: logger,
       healthRepository: new PgHealthRepository(sql),
+      smsProvider: config.SMS_PROVIDER,
       simulate: config.SMS_PROVIDER === smsProvider.mock ? { ingestInboundMessage } : null,
     });
 

@@ -138,6 +138,7 @@ function makeServerDeps(): ServerDeps {
     eventBus: bus,
     heartbeatMs: HEARTBEAT_MS,
     healthRepository: new PgHealthRepository(client.sql),
+    smsProvider: 'mock',
   };
 }
 

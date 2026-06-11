@@ -43,6 +43,7 @@ export function buildTestApp(client: DbClient, opts: { simulate?: boolean } = {}
     eventBus: noopEventBus,
     heartbeatMs: 30_000,
     healthRepository: new PgHealthRepository(client.sql),
+    smsProvider: opts.simulate ? 'mock' : 'twilio',
     simulate: opts.simulate ? { ingestInboundMessage } : null,
   });
 

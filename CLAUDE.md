@@ -92,12 +92,13 @@ The job's own state (`pending → running → completed | failed`) is operationa
 
 ## Frontend: minimal admin
 
-The admin is read-heavy and deliberately simple: conversation list (paginated by recency), conversation detail (full inbound/outbound history with per-message status badges, including `failed` with error detail), and — in mock mode only — a simulate form that drives the full pipeline end-to-end from the browser.
+The admin is read-heavy and deliberately scoped to three screens: conversation list (paginated by recency), conversation detail (full inbound/outbound history with per-message status badges, including `failed` with error detail), and — in mock mode only — a simulate form that drives the full pipeline end-to-end from the browser. It lives as its own package in `admin/` (React 19 + Vite + TanStack Query v5 + Tailwind v4 + shadcn-ui), built and tested independently of the backend.
 
 - Live updates via SSE (`GET /api/events`) feeding TanStack Query cache invalidation, keyed by `conversationId`.
 - A wide-interval refetch (30 s) stays as **graceful degradation** if the stream drops — documented as fallback, not the primary mechanism.
-- No business logic in components: components render, hooks orchestrate, status/derived state comes from pure functions or shared contracts.
-- Keep the structure flat and obvious; do not impose a heavy architecture (FSD, etc.) on a three-screen admin.
+- No business logic in components: components render, hooks orchestrate, status/derived state comes from pure functions (e.g. `statusBadge`) or shared contracts.
+- **FSD-lite architecture** (`app → pages → widgets → features → entities → shared`), with the import direction enforced by ESLint (`import/no-restricted-paths`) the same way the backend layers are. A layer imports only from layers strictly below it; same-layer cross-imports go through a slice's public `index.ts`. Collapse empty layers rather than add ceremony — this is FSD-lite for a small admin, not full FSD. (This supersedes the earlier "no FSD" guidance.)
+- The design system is **token-driven**: brand tokens live once in `app/styles/globals.css` (`@theme`), every shadcn semantic variable maps onto them, and swapping the accent reskins the app with no per-component edits. Wire types are re-declared as Zod schemas in `shared/api` and every response is parsed — the inferred type is the truth, no parallel interfaces.
 
 ## Shared contracts
 

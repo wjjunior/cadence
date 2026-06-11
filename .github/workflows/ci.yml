@@ -46,3 +46,19 @@ jobs:
       # Integration tests spin a throwaway Postgres via Testcontainers (Docker is
       # preinstalled on ubuntu-latest) and run migrations in their own beforeAll.
       - run: pnpm test:integration
+
+  admin:
+    name: Admin (typecheck, lint, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm admin:typecheck
+      - run: pnpm admin:lint
+      - run: pnpm admin:test
+      - run: pnpm admin:build

@@ -1,8 +1,13 @@
+packages:
+  - admin
+
 allowBuilds:
-  esbuild: true
-  lefthook: true
+  '@tailwindcss/oxide': true
   # testcontainers' Docker transport (dockerode) pulls these native/optional
   # build scripts; not needed for the local Docker socket, so left unbuilt.
   cpu-features: false
+  esbuild: true
+  lefthook: true
   protobufjs: false
   ssh2: false
+  unrs-resolver: true

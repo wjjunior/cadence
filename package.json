@@ -27,6 +27,11 @@
     "dev:worker": "tsx watch src/entrypoints/worker.ts",
     "start:api": "node dist/entrypoints/api.js",
     "start:worker": "node dist/entrypoints/worker.js",
+    "admin:dev": "pnpm --filter @cadence/admin dev",
+    "admin:build": "pnpm --filter @cadence/admin build",
+    "admin:lint": "pnpm --filter @cadence/admin lint",
+    "admin:typecheck": "pnpm --filter @cadence/admin typecheck",
+    "admin:test": "pnpm --filter @cadence/admin test",
     "build": "tsc -p tsconfig.build.json",
     "prepare": "lefthook install"
   },

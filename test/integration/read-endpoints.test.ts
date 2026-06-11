@@ -46,6 +46,7 @@ beforeAll(async () => {
     eventBus: { subscribe: () => () => {} },
     heartbeatMs: 15_000,
     healthRepository: new PgHealthRepository(client.sql),
+    smsProvider: 'mock',
   });
   await app.ready();
 });
@@ -138,5 +139,13 @@ describe('GET /api/conversations/:id/messages', () => {
   it('should return 400 for a non-uuid conversation id', async () => {
     const res = await app.inject({ url: '/api/conversations/not-a-uuid/messages' });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('GET /api/config', () => {
+  it('should expose the configured sms provider', async () => {
+    const res = await app.inject({ url: '/api/config' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ smsProvider: string }>()).toEqual({ smsProvider: 'mock' });
   });
 });

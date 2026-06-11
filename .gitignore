@@ -8,3 +8,6 @@ coverage
 
 # brainstorming specs and implementation plans (working docs, never committed)
 specs/
+
+# tsc -b incremental build caches
+*.tsbuildinfo
