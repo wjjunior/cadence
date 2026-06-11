@@ -8,7 +8,7 @@ export const MessageDto = z.object({
   id: z.string(),
   direction: z.enum([messageDirection.inbound, messageDirection.outbound]),
   body: z.string(),
-  status: z.enum(messageStatusValues), // single source of truth from the domain (rule 3)
+  status: z.enum(messageStatusValues),
   errorDetail: z.string().nullable(), // populated on failed
   createdAt: z.iso.datetime(),
 });

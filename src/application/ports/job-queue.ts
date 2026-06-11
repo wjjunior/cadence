@@ -12,6 +12,7 @@ export interface WorkerQueue {
   claim(workerId: string): Promise<Job | null>;
   reapExpiredLeases(): Promise<number>;
   complete(tx: Tx, jobId: string): Promise<void>;
+  // `claim` already incremented `attempts` (design §5.1); fail only records the outcome.
   // retryAt: a Date reschedules (running -> pending, next_run_at = retryAt); null is terminal (running -> failed).
   fail(tx: Tx, jobId: string, error: string, retryAt: Date | null): Promise<void>;
 }

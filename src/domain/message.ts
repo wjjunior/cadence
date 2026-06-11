@@ -1,7 +1,5 @@
 import type { MessageDirection, MessageStatus } from './status.js';
 
-export type { MessageStatus };
-
 export interface Message {
   id: string;
   conversationId: string;
