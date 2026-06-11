@@ -23,5 +23,45 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # One-shot: applies migrations once, then exits. api and worker wait for it to
+  # complete so neither serves against an unmigrated schema.
+  migrate:
+    build: .
+    image: cadence
+    command: ['node', 'dist/infrastructure/db/migrate.js']
+    environment:
+      DATABASE_URL: postgresql://cadence:cadence@postgres:5432/cadence
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build: .
+    image: cadence
+    command: ['node', 'dist/entrypoints/api.js']
+    environment:
+      DATABASE_URL: postgresql://cadence:cadence@postgres:5432/cadence
+      LOG_LEVEL: info
+    # Loopback-only; mock SMS is the zero-config default, so no secrets here.
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    build: .
+    image: cadence
+    command: ['node', 'dist/entrypoints/worker.js']
+    environment:
+      DATABASE_URL: postgresql://cadence:cadence@postgres:5432/cadence
+      LOG_LEVEL: info
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 volumes:
   cadence-pgdata:

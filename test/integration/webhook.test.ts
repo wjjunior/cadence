@@ -15,6 +15,7 @@ import { PgHealthRepository } from '../../src/infrastructure/repositories/health
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
 import { buildServer } from '../../src/http/server.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 let container: StartedPostgreSqlContainer;
 let client: DbClient;
@@ -38,6 +39,7 @@ beforeAll(async () => {
     messages,
     new DrizzleJobEnqueuer(),
     new PgNotifier(),
+    silentLogger,
   );
   app = buildServer({
     listConversations: new ListConversations(conversations),

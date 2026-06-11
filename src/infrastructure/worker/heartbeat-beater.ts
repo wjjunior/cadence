@@ -3,7 +3,8 @@ import type { HeartbeatRepository } from '../../application/ports/heartbeat-repo
 const noop = (): void => {};
 
 export class HeartbeatBeater {
-  private timer: ReturnType<typeof setInterval> | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private stopped = false;
 
   constructor(
     private readonly repo: HeartbeatRepository,
@@ -13,15 +14,26 @@ export class HeartbeatBeater {
   ) {}
 
   async start(): Promise<void> {
+    this.stopped = false;
     await this.beat();
-    this.timer = setInterval(() => void this.beat(), this.intervalMs);
+    this.scheduleNext();
   }
 
   stop(): void {
+    this.stopped = true;
     if (this.timer) {
-      clearInterval(this.timer);
+      clearTimeout(this.timer);
       this.timer = null;
     }
+  }
+
+  // Self-rescheduling so a beat that outlasts the interval (transient DB slowness)
+  // can never overlap the next one (setInterval would).
+  private scheduleNext(): void {
+    if (this.stopped) return;
+    this.timer = setTimeout(() => {
+      void this.beat().finally(() => this.scheduleNext());
+    }, this.intervalMs);
   }
 
   private async beat(): Promise<void> {

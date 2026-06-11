@@ -226,6 +226,24 @@ describe('PgWorkerQueue.fail', () => {
   });
 });
 
+describe('PgWorkerQueue.stats', () => {
+  it('should report pending depth and the oldest claimable age, excluding backed-off jobs', async () => {
+    await seedJob({ nextRunAt: "now() - interval '5 seconds'" });
+    await seedJob({ nextRunAt: "now() - interval '1 second'" });
+    await seedJob({ nextRunAt: "now() + interval '1 hour'" });
+
+    const stats = await queue.stats();
+
+    expect(stats.pendingDepth).toBe(3);
+    expect(stats.oldestPendingAgeMs).toBeGreaterThanOrEqual(4_000);
+    expect(stats.oldestPendingAgeMs).toBeLessThan(60_000);
+  });
+
+  it('should report zero depth and null age when there are no pending jobs', async () => {
+    expect(await queue.stats()).toEqual({ pendingDepth: 0, oldestPendingAgeMs: null });
+  });
+});
+
 describe('PgWorkerQueue.reapExpiredLeases', () => {
   it('should return an expired running job to pending and clear its lock/lease', async () => {
     const jobId = await seedJob({ status: 'running' });

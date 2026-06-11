@@ -5,9 +5,17 @@ export interface JobEnqueuer {
   enqueueInTx(tx: Tx, job: NewJob): Promise<void>;
 }
 
+export interface QueueStats {
+  pendingDepth: number;
+  oldestPendingAgeMs: number | null;
+}
+
 export interface WorkerQueue {
   claim(workerId: string): Promise<Job | null>;
   reapExpiredLeases(): Promise<number>;
+  // pendingDepth is total backlog; oldestPendingAgeMs is the lag of the oldest *claimable* job
+  // (next_run_at <= now), so backed-off jobs don't inflate it. null when nothing is eligible.
+  stats(): Promise<QueueStats>;
   // workerId guards against a worker whose lease expired mid-processing clobbering a job another
   // worker has since re-claimed; the returned boolean (did we still own the lock?) lets the caller
   // gate the rest of its transaction so a stale worker writes nothing at all.

@@ -6,6 +6,7 @@ import { type DbClient, createDbClient } from '../../src/infrastructure/db/clien
 import { runMigrations } from '../../src/infrastructure/db/migrator.js';
 import { PgWorkerQueue } from '../../src/infrastructure/job-queue/pg-worker-queue.js';
 import { WorkerRuntime } from '../../src/infrastructure/worker/worker-runtime.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 const LEASE_MS = 60_000;
 
@@ -93,6 +94,7 @@ describe('WorkerRuntime poll + reaper + concurrency', () => {
       concurrency: 2,
       reconcilePollMs: 300,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
 
@@ -111,6 +113,7 @@ describe('WorkerRuntime poll + reaper + concurrency', () => {
       concurrency: 2,
       reconcilePollMs: 300,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
 
@@ -129,6 +132,7 @@ describe('WorkerRuntime poll + reaper + concurrency', () => {
       concurrency: 2,
       reconcilePollMs: 300,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
 
@@ -145,6 +149,7 @@ describe('WorkerRuntime poll + reaper + concurrency', () => {
       concurrency: 2,
       reconcilePollMs: 300,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
     await runtime.stop();
@@ -167,6 +172,7 @@ describe('WorkerRuntime LISTEN wake-up', () => {
       concurrency: 2,
       reconcilePollMs: 60_000,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
 
@@ -191,6 +197,7 @@ describe('WorkerRuntime LISTEN wake-up', () => {
       concurrency: 2,
       reconcilePollMs: 60_000,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
     await runtime.start();
@@ -212,6 +219,7 @@ describe('WorkerRuntime LISTEN wake-up', () => {
       concurrency: 4,
       reconcilePollMs: 60_000,
       workerId: 'w',
+      logger: silentLogger,
     });
     await runtime.start();
 

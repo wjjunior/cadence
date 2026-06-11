@@ -25,6 +25,12 @@ describe('loadConfig', () => {
     expect(config.BACKOFF_CAP_MS).toBe(60_000);
     expect(config.API_PORT).toBe(3000);
     expect(config.SSE_HEARTBEAT_MS).toBe(15_000);
+    expect(config.LOG_LEVEL).toBe('info');
+    expect(config.METRICS_POLL_MS).toBe(10_000);
+  });
+
+  it('should reject an unknown LOG_LEVEL value', () => {
+    expect(() => loadConfig({ LOG_LEVEL: 'verbose' })).toThrow(ConfigValidationError);
   });
 
   it('should coerce an API_PORT override', () => {

@@ -14,6 +14,7 @@ import { DrizzleMessageRepository } from '../../../src/infrastructure/repositori
 import { PgNotifier } from '../../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../../src/infrastructure/repositories/webhook-event-repository.js';
 import { buildServer } from '../../../src/http/server.js';
+import { silentLogger } from '../../helpers/silent-logger.js';
 
 const noopEventBus: EventBus = { subscribe: () => () => {} };
 
@@ -32,6 +33,7 @@ export function buildTestApp(client: DbClient, opts: { simulate?: boolean } = {}
     messages,
     new DrizzleJobEnqueuer(),
     new PgNotifier(),
+    silentLogger,
   );
 
   const app = buildServer({

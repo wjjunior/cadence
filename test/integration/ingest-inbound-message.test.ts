@@ -1,6 +1,7 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { IngestInboundMessage } from '../../src/application/ingest-inbound-message.js';
+import type { Logger } from '../../src/application/ports/logger.js';
 import type { Notifier } from '../../src/application/ports/notifier.js';
 import { InvalidPhoneNumberError } from '../../src/domain/conversation.js';
 import { type DbClient, createDbClient } from '../../src/infrastructure/db/client.js';
@@ -11,6 +12,7 @@ import { DrizzleJobEnqueuer } from '../../src/infrastructure/repositories/job-en
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../../src/infrastructure/repositories/webhook-event-repository.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 let container: StartedPostgreSqlContainer;
 let client: DbClient;
@@ -20,7 +22,7 @@ let ingest: IngestInboundMessage;
 const command = { from: '+15550001234', to: '+15559876543', body: 'hi', providerSid: 'SM-001' };
 const rawPayload = { MessageSid: 'SM-001', From: command.from, To: command.to, Body: command.body };
 
-function makeIngest(notifier: Notifier): IngestInboundMessage {
+function makeIngest(notifier: Notifier, logger: Logger = silentLogger): IngestInboundMessage {
   return new IngestInboundMessage(
     uow,
     new DrizzleWebhookEventRepository(),
@@ -28,6 +30,7 @@ function makeIngest(notifier: Notifier): IngestInboundMessage {
     new DrizzleMessageRepository(client.db),
     new DrizzleJobEnqueuer(),
     notifier,
+    logger,
   );
 }
 
@@ -70,6 +73,19 @@ describe('IngestInboundMessage', () => {
     expect(await countRows('jobs')).toBe(1);
     const status = await client.sql<{ status: string }[]>`select status from messages limit 1`;
     expect(status[0]?.status).toBe('received');
+  });
+
+  it('should log message_received with the conversation and message ids', async () => {
+    const events: Array<Record<string, unknown>> = [];
+    const capture: Logger = { ...silentLogger, info: (o) => events.push(o) };
+    const result = await makeIngest(new PgNotifier(), capture).execute(command, rawPayload);
+    if (result.duplicate) throw new Error('expected a non-duplicate result');
+
+    expect(events).toContainEqual({
+      event: 'message_received',
+      conversationId: result.conversationId,
+      messageId: result.messageId,
+    });
   });
 
   it('should reject (not throw synchronously) on a malformed phone, before opening a transaction', async () => {
