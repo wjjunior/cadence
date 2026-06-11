@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type {
   ConversationChangedEvent,
   EventBus,
@@ -8,6 +10,8 @@ import { notifyChannels } from '../db/notify-channels.js';
 
 type Listener = (event: ConversationChangedEvent) => void;
 
+const conversationIdPayload = z.uuid();
+
 export class PgEventBus implements EventBus {
   private readonly subscribers = new Set<Listener>();
   private listener: { unlisten: () => Promise<void> } | null = null;
@@ -15,10 +19,9 @@ export class PgEventBus implements EventBus {
 
   constructor(private readonly sql: DbClient['sql']) {}
 
-  // postgres.js owns this dedicated connection and auto-reconnects with backoff, re-issuing
-  // LISTEN on reconnect; events lost during that window are covered by the admin poll, so no
-  // onlisten catch-up is needed here (unlike the worker). The pending-promise guard makes
-  // concurrent start() calls share one LISTEN rather than opening (and leaking) a second.
+  // postgres.js auto-reconnects this dedicated connection, so no reconnect path is needed (the
+  // reconnect-window gap is covered by the admin poll). The pending guard shares one LISTEN
+  // across concurrent start() calls instead of leaking a second connection.
   async start(): Promise<void> {
     if (this.listener) return;
     if (this.starting) return this.starting;
@@ -49,9 +52,9 @@ export class PgEventBus implements EventBus {
   }
 
   private fanOut(payload: string): void {
-    const conversationId = payload.trim();
-    if (!conversationId) return;
-    const event: ConversationChangedEvent = { conversationId };
+    const parsed = conversationIdPayload.safeParse(payload.trim());
+    if (!parsed.success) return;
+    const event: ConversationChangedEvent = { conversationId: parsed.data };
     for (const listener of this.subscribers) {
       try {
         listener(event);

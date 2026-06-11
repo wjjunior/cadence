@@ -5,6 +5,8 @@ import { PgEventBus } from './pg-event-bus.js';
 
 type NotifyCb = (payload: string) => void;
 
+const CID = 'c0000000-0000-4000-8000-000000000001';
+
 function fakeSql(): { sql: DbClient['sql']; listen: ReturnType<typeof vi.fn>; emit: NotifyCb } {
   let captured: NotifyCb = () => {};
   const listen = vi.fn((_channel: string, onNotify: NotifyCb) => {
@@ -38,9 +40,9 @@ describe('PgEventBus', () => {
     });
     bus.subscribe((event) => received.push(event.conversationId));
 
-    emit('c1');
+    emit(CID);
 
-    expect(received).toEqual(['c1']);
+    expect(received).toEqual([CID]);
   });
 
   it('should ignore an empty notification payload', async () => {
@@ -55,6 +57,18 @@ describe('PgEventBus', () => {
     expect(received).toEqual([]);
   });
 
+  it('should ignore a non-uuid notification payload', async () => {
+    const { sql, emit } = fakeSql();
+    const bus = new PgEventBus(sql);
+    await bus.start();
+    const received: string[] = [];
+    bus.subscribe((event) => received.push(event.conversationId));
+
+    emit('not-a-uuid');
+
+    expect(received).toEqual([]);
+  });
+
   it('should stop delivering to an unsubscribed listener', async () => {
     const { sql, emit } = fakeSql();
     const bus = new PgEventBus(sql);
@@ -63,7 +77,7 @@ describe('PgEventBus', () => {
     const unsubscribe = bus.subscribe((event) => received.push(event.conversationId));
 
     unsubscribe();
-    emit('c1');
+    emit(CID);
 
     expect(received).toEqual([]);
   });

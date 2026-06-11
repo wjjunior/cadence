@@ -9,7 +9,7 @@ export interface EventRoutesDeps {
   heartbeatMs: number;
 }
 
-const SSE_HEADERS = {
+const sseHeaders = {
   'content-type': 'text/event-stream',
   'cache-control': 'no-cache',
   connection: 'keep-alive',
@@ -21,7 +21,7 @@ export function registerEventRoutes(app: FastifyInstance, deps: EventRoutesDeps)
   app.get('/api/events', (request, reply) => {
     reply.hijack();
     const raw = reply.raw;
-    raw.writeHead(200, SSE_HEADERS);
+    raw.writeHead(200, sseHeaders);
     raw.write(':ok\n\n');
 
     let stopped = false;
