@@ -10,6 +10,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: the jobs only check out the repo and run tests.
+permissions:
+  contents: read
+
 jobs:
   gate:
     name: Typecheck, lint & unit tests
