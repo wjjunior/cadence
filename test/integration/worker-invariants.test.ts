@@ -13,6 +13,7 @@ import { DrizzleConversationRepository } from '../../src/infrastructure/reposito
 import { DrizzleMessageRepository } from '../../src/infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../../src/infrastructure/repositories/notifier.js';
 import { MockSmsProvider } from '../../src/infrastructure/sms/mock-sms-provider.js';
+import { silentLogger } from '../helpers/silent-logger.js';
 
 let container: StartedPostgreSqlContainer;
 let client: DbClient;
@@ -44,7 +45,17 @@ const recordingGenerator = (order: string[]): ReplyGenerator => ({
 });
 
 function makeProcessJob(generator: ReplyGenerator): ProcessJob {
-  return new ProcessJob(uow, conversations, messages, workerQueue, generator, sms, notifier, settings);
+  return new ProcessJob(
+    uow,
+    conversations,
+    messages,
+    workerQueue,
+    generator,
+    sms,
+    notifier,
+    settings,
+    silentLogger,
+  );
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
