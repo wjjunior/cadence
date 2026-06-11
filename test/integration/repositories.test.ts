@@ -196,6 +196,6 @@ describe('DrizzleJobEnqueuer', () => {
 
 describe('PgNotifier', () => {
   it('should emit a notification inside a transaction without error', async () => {
-    await expect(uow.run((tx) => notifier.jobCreated(tx, 'job-1'))).resolves.toBeUndefined();
+    await expect(uow.run((tx) => notifier.jobCreated(tx))).resolves.toBeUndefined();
   });
 });
