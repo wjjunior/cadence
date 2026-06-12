@@ -3,7 +3,7 @@ export class FakeEventSource {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
-  static instances: FakeEventSource[] = [];
+  static readonly instances: FakeEventSource[] = [];
 
   readyState = FakeEventSource.CONNECTING;
   onopen: (() => void) | null = null;
@@ -22,7 +22,7 @@ export class FakeEventSource {
   }
 
   static reset(): void {
-    FakeEventSource.instances = [];
+    FakeEventSource.instances.length = 0;
   }
 
   emitOpen(): void {

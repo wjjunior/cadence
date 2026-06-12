@@ -6,7 +6,9 @@ import { FALLBACK_REFETCH_MS } from '@/shared/config';
 import { formatPhone } from '@/shared/lib';
 import { ScrollArea, Separator, Skeleton } from '@/shared/ui';
 
-export function ConversationThread({ conversationId }: { conversationId: string }) {
+const threadSkeletonKeys = ['a', 'b', 'c', 'd'] as const;
+
+export function ConversationThread({ conversationId }: Readonly<{ conversationId: string }>) {
   const query = useQuery({
     queryKey: queryKeys.conversationDetail(conversationId),
     queryFn: () => fetchConversationDetail(conversationId),
@@ -16,8 +18,8 @@ export function ConversationThread({ conversationId }: { conversationId: string 
   if (query.isPending) {
     return (
       <div className="flex flex-col gap-3 p-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-2/3" />
+        {threadSkeletonKeys.map((key) => (
+          <Skeleton key={key} className="h-12 w-2/3" />
         ))}
       </div>
     );

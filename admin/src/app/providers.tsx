@@ -9,7 +9,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export function AppProviders({ children }: { children: ReactNode }) {
+export function AppProviders({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={200}>{children}</TooltipProvider>

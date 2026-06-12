@@ -15,10 +15,10 @@ export function useLiveUpdates(): SseStatus {
     return connectEvents(EVENTS_URL, {
       onStatus: setStatus,
       onEvent: (event) => {
-        void queryClient.invalidateQueries({
+        queryClient.invalidateQueries({
           queryKey: queryKeys.conversationDetail(event.conversationId),
         });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversationList });
+        queryClient.invalidateQueries({ queryKey: queryKeys.conversationList });
       },
     });
   }, [queryClient]);

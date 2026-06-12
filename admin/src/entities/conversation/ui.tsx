@@ -6,11 +6,11 @@ export function ConversationSummaryCard({
   conversation,
   active,
   onSelect,
-}: {
+}: Readonly<{
   conversation: ConversationSummary;
   active: boolean;
   onSelect: (id: string) => void;
-}) {
+}>) {
   return (
     <button type="button" onClick={() => onSelect(conversation.id)} className="block w-full text-left">
       <Card

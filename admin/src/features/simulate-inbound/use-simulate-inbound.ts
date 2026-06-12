@@ -7,7 +7,7 @@ export function useSimulateInbound() {
   return useMutation({
     mutationFn: simulateInbound,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversationList });
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversationList });
     },
   });
 }
