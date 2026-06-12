@@ -45,8 +45,7 @@ async function main(): Promise<void> {
         ? new TwilioSignatureVerifier(config.TWILIO_AUTH_TOKEN)
         : undefined;
 
-    // Serve the built admin when its entry file is present beside the compiled entrypoint
-    // (the image); absent in local tsx dev, where the admin runs via `vite dev`.
+    // Serve the built admin when present (the image); absent in local tsx dev, where it runs via vite.
     const adminDir = fileURLToPath(new URL('../../admin/dist', import.meta.url));
     const adminReady = existsSync(join(adminDir, 'index.html'));
 
@@ -81,8 +80,7 @@ async function main(): Promise<void> {
     await app.listen({ port: config.API_PORT, host: '0.0.0.0' });
     logger.info({ event: 'listening', port: config.API_PORT });
   } catch (error) {
-    // Free the listen connection and db pool so a failed startup exits instead
-    // of hanging on open handles (the server's own onClose only runs post-listen).
+    // The server's onClose only runs post-listen, so free these handles on a startup failure.
     await eventBus.close().catch(() => {});
     await sql.end().catch(() => {});
     throw error;

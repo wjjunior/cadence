@@ -12,7 +12,7 @@ const DEFAULT_REPLY_DELAY_MIN_MS = 3_000;
 const DEFAULT_REPLY_DELAY_MAX_MS = 15_000;
 const DEFAULT_WORKER_CONCURRENCY = 10;
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
-// 60s lease is 4x the 15s worst-case processing time (design §5.1).
+// 60s lease is 4x the 15s worst-case processing time.
 const DEFAULT_LEASE_DURATION_MS = 60_000;
 const DEFAULT_RECONCILE_POLL_MS = 5_000;
 const DEFAULT_BACKOFF_BASE_MS = 1_000;
@@ -31,8 +31,7 @@ const twilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMB
 const positiveInt = (defaultValue: number) =>
   z.coerce.number().int().positive().default(defaultValue);
 
-// A blank value in a copied .env (e.g. TWILIO_ACCOUNT_SID=) means "unset", not a
-// zero-length secret, so it must not trip the min(1) check while in mock mode.
+// A blank value in a copied .env means "unset", not a zero-length secret, so it must not trip min(1).
 const optionalSecret = () =>
   z.preprocess((v) => (v === '' ? undefined : v), z.string().min(1).optional());
 
@@ -57,8 +56,7 @@ const envSchema = z
     BACKOFF_CAP_MS: positiveInt(DEFAULT_BACKOFF_CAP_MS),
     API_PORT: positiveInt(DEFAULT_API_PORT),
     SSE_HEARTBEAT_MS: positiveInt(DEFAULT_SSE_HEARTBEAT_MS),
-    // Off by default: only trust X-Forwarded-* (for the Twilio signature URL) behind a
-    // known proxy/LB. Enabling it blindly would let a client spoof the scheme/host.
+    // Trust X-Forwarded-* only behind a known proxy; enabling it blindly lets a client spoof the scheme/host.
     TRUST_PROXY: z.preprocess((v) => v === 'true' || v === '1', z.boolean()),
     METRICS_POLL_MS: positiveInt(DEFAULT_METRICS_POLL_MS),
     LOG_LEVEL: z.enum(logLevels).default(DEFAULT_LOG_LEVEL),
@@ -113,9 +111,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return result.data;
 }
 
-// The migration CLI needs only the database URL and must not require the SMS
-// configuration (e.g. Twilio credentials) just to run migrations — so it routes
-// through here rather than reading process.env itself (rule 11).
+// The migration CLI needs only the database URL, so it must not require the Twilio config to run.
 export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   const result = databaseUrlSchema.safeParse(env.DATABASE_URL);
   if (!result.success) {

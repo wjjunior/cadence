@@ -7,7 +7,6 @@ import { SimulateInbound } from '../../application/contracts/simulate.js';
 import type { IngestInboundMessage } from '../../application/ingest-inbound-message.js';
 import { InvalidPhoneNumberError } from '../../domain/conversation.js';
 
-// The mock system number the simulated inbound is addressed to (E.164).
 const SIMULATE_SYSTEM_PHONE = '+10000000000';
 
 export interface SimulateRoutesDeps {

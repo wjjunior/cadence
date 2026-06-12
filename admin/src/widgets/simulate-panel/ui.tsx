@@ -4,7 +4,6 @@ import { SimulateForm } from '@/features/simulate-inbound';
 import { fetchConfig, queryKeys } from '@/shared/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui';
 
-// Present only in mock mode — the /api/config provider is the single source of truth.
 export function SimulatePanel() {
   const config = useQuery({
     queryKey: queryKeys.config,

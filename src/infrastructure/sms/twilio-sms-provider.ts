@@ -13,8 +13,7 @@ export class TwilioSmsProvider implements SmsProvider {
     body: string;
     idempotencyKey: string;
   }): Promise<{ providerSid: string }> {
-    // The Messages API has no per-request idempotency key, so it is not forwarded;
-    // effectively-once here rests on the outbound UNIQUE plus the worker's pre-send check.
+    // The Messages API has no idempotency key; effectively-once rests on the outbound UNIQUE and pre-send check.
     try {
       const { sid } = await this.client.create({
         to: input.to,

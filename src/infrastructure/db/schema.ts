@@ -55,8 +55,7 @@ export const messages = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    // Idempotency layer: inbound SID dedup and outbound idempotency-key dedup are
-    // direction-scoped, hence partial unique indexes rather than table-wide.
+    // Direction-scoped dedup, hence partial unique indexes rather than table-wide.
     uniqueIndex('messages_inbound_sid')
       .on(t.providerMessageSid)
       .where(sql`${t.direction} = 'inbound'`),
@@ -80,7 +79,7 @@ export const jobs = pgTable(
       .notNull()
       .unique()
       .references(() => messages.id),
-    // Denormalized so the serialized claim predicate needs no join (§4).
+    // Denormalized so the claim predicate needs no join.
     conversationId: uuid('conversation_id')
       .notNull()
       .references(() => conversations.id),
@@ -101,8 +100,7 @@ export const jobs = pgTable(
     index('jobs_conversation_open')
       .on(t.conversationId, t.createdAt)
       .where(sql`${t.status} in ('pending', 'running')`),
-    // The serialization GUARANTEE (§5.1.1): two running jobs of one conversation
-    // become unrepresentable at the storage layer.
+    // The serialization guarantee: two running jobs of one conversation become unrepresentable.
     uniqueIndex('one_running_per_conversation')
       .on(t.conversationId)
       .where(sql`${t.status} = 'running'`),

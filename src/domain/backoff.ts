@@ -1,10 +1,6 @@
-// Fraction of each delay that is randomized to de-correlate concurrent retries
-// (thundering herd); the remaining (1 - JITTER_RATIO) is the fixed floor, which
-// keeps the delay monotonic in `attempt` for a fixed jitter value.
+// Half of each delay is randomized to de-correlate concurrent retries; the fixed half keeps it monotonic in attempt.
 const JITTER_RATIO = 0.5;
 
-// Jitter is injected by the caller, not read from Math.random(), so the domain
-// stays pure and the result is deterministic.
 export function backoffDelay(
   attempt: number,
   baseMs: number,
@@ -20,8 +16,7 @@ export function backoffDelay(
   if (!Number.isFinite(capMs) || capMs < 0) {
     throw new RangeError(`capMs must be a non-negative finite number, got ${capMs}`);
   }
-  // Written as a positive assertion so NaN (where every comparison is false) is
-  // rejected rather than slipping through a `rand < 0 || rand >= 1` check.
+  // Positive assertion so NaN is rejected rather than slipping through a `rand < 0 || rand >= 1` check.
   if (!(rand >= 0 && rand < 1)) {
     throw new RangeError(`rand must be in [0, 1), got ${rand}`);
   }

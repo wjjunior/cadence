@@ -13,13 +13,10 @@ export interface QueueStats {
 export interface WorkerQueue {
   claim(workerId: string): Promise<Job | null>;
   reapExpiredLeases(): Promise<number>;
-  // pendingDepth is total backlog; oldestPendingAgeMs is the lag of the oldest *claimable* job
-  // (next_run_at <= now), so backed-off jobs don't inflate it. null when nothing is eligible.
+  // oldestPendingAgeMs is the lag of the oldest *claimable* job, so backed-off jobs don't inflate it.
   stats(): Promise<QueueStats>;
-  // workerId guards against a worker whose lease expired mid-processing clobbering a job another
-  // worker has since re-claimed; the returned boolean (did we still own the lock?) lets the caller
-  // gate the rest of its transaction so a stale worker writes nothing at all.
+  // The boolean is whether we still owned the lock, so a worker whose lease expired writes nothing.
   complete(tx: Tx, jobId: string, workerId: string): Promise<boolean>;
-  // claim already incremented attempts (§5.1); a Date retryAt reschedules to pending, null is terminal.
+  // A Date retryAt reschedules to pending; null is terminal.
   fail(tx: Tx, jobId: string, workerId: string, error: string, retryAt: Date | null): Promise<boolean>;
 }

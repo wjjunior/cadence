@@ -29,8 +29,7 @@ async function main(): Promise<void> {
   let metricsTimer: ReturnType<typeof setInterval> | undefined;
   let runtime: WorkerRuntime | undefined;
   let heartbeat: HeartbeatBeater | undefined;
-  // Frees every handle (timers, heartbeat, lease loops, db pool) so the process can
-  // exit — shared by the signal path and the startup-failure path below.
+  // Frees every handle so the process can exit — shared by the signal and startup-failure paths.
   const teardown = async (): Promise<void> => {
     if (metricsTimer) clearInterval(metricsTimer);
     heartbeat?.stop();
@@ -94,15 +93,12 @@ async function main(): Promise<void> {
       shuttingDown = true;
       void teardown();
     };
-    // Registered before start() so a signal during startup still triggers a clean
-    // shutdown (stop() on a not-yet-started runtime is a safe no-op).
+    // Registered before start() so a signal during startup still triggers a clean shutdown.
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, shutdown);
 
     await runtime.start();
     await heartbeat.start();
   } catch (error) {
-    // Free the handles opened above so the failed process exits (and the
-    // container restarts) instead of hanging on the timers / db pool.
     await teardown();
     throw error;
   }

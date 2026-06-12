@@ -3,8 +3,7 @@ const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-// Compact relative time ("just now", "5m", "3h", "2d"), with an absolute
-// fallback past a week. `now` is injectable so the formatter stays pure/testable.
+// Compact relative time with an absolute fallback past a week; now is injectable to stay pure/testable.
 export function relativeTime(iso: string, now: number = Date.now()): string {
   const elapsed = now - new Date(iso).getTime();
   if (elapsed < MINUTE) return 'just now';
@@ -14,8 +13,7 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
   return new Date(iso).toLocaleDateString();
 }
 
-// Groups a +1 (NANP) number for display, e.g. +15550001234 → +1 555 000 1234;
-// any other shape (other country codes, non-E.164) is returned unchanged.
+// Groups a +1 (NANP) number for display; any other shape is returned unchanged.
 export function formatPhone(phone: string): string {
   const match = /^\+(\d)(\d{3})(\d{3})(\d{0,4})$/.exec(phone);
   if (!match) return phone;

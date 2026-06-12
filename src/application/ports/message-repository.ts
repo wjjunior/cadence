@@ -19,7 +19,6 @@ export interface NewOutboundMessage {
 export interface MessageRepository {
   insertInbound(tx: Tx, input: NewInboundMessage): Promise<Message>;
   insertOutbound(tx: Tx, input: NewOutboundMessage): Promise<Message>;
-  // the edge is validated by the caller via the domain transition functions, not here.
   markStatus(tx: Tx, id: string, status: MessageStatus, errorDetail?: string | null): Promise<void>;
   listByConversation(conversationId: string): Promise<Message[]>;
 }

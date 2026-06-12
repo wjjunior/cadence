@@ -10,7 +10,6 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 const listQuery = z.object({
-  // An empty `cursor=` means "no cursor" (first page), the same as omitting it.
   cursor: z
     .string()
     .optional()

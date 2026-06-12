@@ -34,8 +34,7 @@ export class WorkerRuntime {
     if (this.running) return;
     this.running = true;
     this.stopped = false;
-    // onNotify wakes for latency; onListen wakes on every (re)connect — the
-    // reconciliation sweep that closes the NOTIFY-lost-while-disconnected gap.
+    // onNotify wakes for latency; onListen wakes on every (re)connect, closing the NOTIFY-lost gap.
     this.listener = await this.deps.sql.listen(
       notifyChannels.jobCreated,
       () => this.wake(),
@@ -65,8 +64,7 @@ export class WorkerRuntime {
     this.log.info({ event: 'worker_stopped' });
   }
 
-  // Self-rescheduling so a reconcile that outlasts the interval can never overlap
-  // the next one (setInterval would).
+  // Self-rescheduling so a reconcile that outlasts the interval can never overlap the next (setInterval would).
   private scheduleReconcile(): void {
     this.pollTimer = setTimeout(() => {
       void this.reconcile().finally(() => {
@@ -75,8 +73,7 @@ export class WorkerRuntime {
     }, this.deps.reconcilePollMs);
   }
 
-  // The reconciliation poll tick: reclaim abandoned leases, then wake runners to
-  // re-sweep — the durability backstop for any NOTIFY that was lost.
+  // Reclaim abandoned leases, then wake runners — the durability backstop for any lost NOTIFY.
   private async reconcile(): Promise<void> {
     try {
       const reaped = await this.deps.queue.reapExpiredLeases();

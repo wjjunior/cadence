@@ -12,7 +12,6 @@ const formParams = z.record(z.string(), z.string()).catch({});
 
 export interface WebhookRoutesDeps {
   ingestInboundMessage: IngestInboundMessage;
-  // Present only in twilio mode; absent in mock mode (no signature required).
   verifier?: WebhookVerifier;
 }
 
@@ -41,8 +40,7 @@ export function registerWebhookRoutes(app: FastifyInstance, deps: WebhookRoutesD
     try {
       await deps.ingestInboundMessage.execute(parsed.data, request.body);
     } catch (error) {
-      // A non-empty but non-E.164 phone is a malformed payload, rejected before the
-      // transaction opens — so 400, not a 5xx that would trigger Twilio retries.
+      // A non-E.164 phone is malformed input — 400, not a 5xx that would trigger Twilio retries.
       if (error instanceof InvalidPhoneNumberError) {
         return reply.code(400).send(errorResponse('invalid phone number'));
       }

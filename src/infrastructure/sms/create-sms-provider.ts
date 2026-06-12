@@ -15,7 +15,6 @@ export async function createSmsProvider(config: Config): Promise<SmsProvider> {
   if (config.SMS_PROVIDER !== smsProvider.twilio) {
     return new MockSmsProvider();
   }
-  // Unreachable given config validation, but it narrows the optional secrets for the type system.
   if (!config.TWILIO_ACCOUNT_SID || !config.TWILIO_AUTH_TOKEN) {
     throw new IncompleteTwilioConfigError();
   }

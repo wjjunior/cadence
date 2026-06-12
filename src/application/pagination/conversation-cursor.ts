@@ -12,8 +12,7 @@ export class InvalidCursorError extends Error {
   }
 }
 
-// Format-validated so a tampered cursor is rejected here, not by a ::timestamptz/::uuid
-// cast error deep in the repository query.
+// Format-validated so a tampered cursor is rejected here, not by a cast error deep in the query.
 const cursorSchema = z.object({ lastMessageAt: z.iso.datetime(), id: z.uuid() });
 
 export function encodeConversationCursor(cursor: ConversationCursor): string {

@@ -27,8 +27,7 @@ export interface ProcessJobSettings {
 
 export class ProcessJobError extends Error {}
 
-// sending is transient: persist only the endpoint, but route through the domain machine so an
-// illegal target throws rather than being written.
+// sending is transient, so persist only the endpoint but still walk it through the domain machine.
 function walkOutbound(end: OutboundStatus): OutboundStatus {
   return transitionOutbound(
     transitionOutbound(outboundStatus.queued, outboundStatus.sending),

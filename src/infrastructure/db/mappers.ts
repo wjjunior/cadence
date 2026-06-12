@@ -3,8 +3,7 @@ import type { Job } from '../../domain/job.js';
 import type { Message } from '../../domain/message.js';
 import { conversations, jobs, messages } from './schema.js';
 
-// Explicit field mapping (not spread) so a renamed/retyped/added schema column fails to
-// compile here — the drift-guard.
+// Explicit field mapping (not spread) so a changed schema column fails to compile here — the drift guard.
 
 export function toConversation(row: typeof conversations.$inferSelect): Conversation {
   return {

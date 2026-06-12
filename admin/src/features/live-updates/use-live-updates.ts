@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import { type SseStatus, connectEvents, queryKeys } from '@/shared/api';
 import { EVENTS_URL } from '@/shared/config';
 
-// One app-wide SSE subscription: a conversation.changed event invalidates that
-// conversation's detail and the list. Returns the connection status for the
-// reconnecting indicator. The 30s fallback refetch lives on the queries.
+// One app-wide SSE subscription invalidating the changed conversation's detail and the list.
 export function useLiveUpdates(): SseStatus {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<SseStatus>('connecting');
