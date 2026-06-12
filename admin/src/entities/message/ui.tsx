@@ -7,10 +7,10 @@ import { statusBadge } from './status-badge';
 export function StatusBadge({
   status,
   errorDetail,
-}: {
+}: Readonly<{
   status: MessageStatus;
   errorDetail: string | null;
-}) {
+}>) {
   const spec = statusBadge(status);
   const badge = (
     <Badge variant={spec.variant} className={spec.pulse ? 'animate-pulse' : undefined}>
@@ -31,7 +31,7 @@ export function StatusBadge({
   return badge;
 }
 
-export function DirectionTag({ direction }: { direction: MessageDto['direction'] }) {
+export function DirectionTag({ direction }: Readonly<{ direction: MessageDto['direction'] }>) {
   return (
     <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {direction === 'inbound' ? 'User' : 'System'}
@@ -39,7 +39,7 @@ export function DirectionTag({ direction }: { direction: MessageDto['direction']
   );
 }
 
-export function MessageBubble({ message }: { message: MessageDto }) {
+export function MessageBubble({ message }: Readonly<{ message: MessageDto }>) {
   const isInbound = message.direction === 'inbound';
   return (
     <div className={cn('flex flex-col gap-1', isInbound ? 'items-start' : 'items-end')}>

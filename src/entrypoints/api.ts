@@ -89,7 +89,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
+try {
+  await main();
+} catch (error) {
   process.exitCode = 1;
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-});
+}

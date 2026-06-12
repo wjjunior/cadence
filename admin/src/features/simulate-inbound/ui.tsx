@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SubmitEvent, useState } from 'react';
 
 import { Button, Input } from '@/shared/ui';
 
@@ -9,7 +9,7 @@ export function SimulateForm() {
   const [body, setBody] = useState('');
   const mutation = useSimulateInbound();
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!from.trim() || !body.trim()) return;
     mutation.mutate({ from, body }, { onSuccess: () => setBody('') });

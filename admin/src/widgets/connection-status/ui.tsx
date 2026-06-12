@@ -7,7 +7,7 @@ const presentation: Record<SseStatus, { label: string; dot: string; muted?: bool
   closed: { label: 'Offline', dot: 'bg-muted-foreground', muted: true },
 };
 
-export function ConnectionStatus({ status }: { status: SseStatus }) {
+export function ConnectionStatus({ status }: Readonly<{ status: SseStatus }>) {
   const { label, dot, muted } = presentation[status];
   return (
     <span

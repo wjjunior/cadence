@@ -5,11 +5,13 @@ import { fetchConversations, queryKeys } from '@/shared/api';
 import { FALLBACK_REFETCH_MS } from '@/shared/config';
 import { Button, Skeleton } from '@/shared/ui';
 
+const listSkeletonKeys = ['a', 'b', 'c', 'd', 'e', 'f'] as const;
+
 function ListSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-16 w-full" />
+      {listSkeletonKeys.map((key) => (
+        <Skeleton key={key} className="h-16 w-full" />
       ))}
     </div>
   );
@@ -18,10 +20,10 @@ function ListSkeleton() {
 export function ConversationList({
   selectedId,
   onSelect,
-}: {
+}: Readonly<{
   selectedId: string | null;
   onSelect: (id: string) => void;
-}) {
+}>) {
   const query = useInfiniteQuery({
     queryKey: queryKeys.conversationList,
     queryFn: ({ pageParam }) => fetchConversations(pageParam),
@@ -54,7 +56,7 @@ export function ConversationList({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => void query.fetchNextPage()}
+          onClick={() => query.fetchNextPage()}
           disabled={query.isFetchingNextPage}
         >
           {query.isFetchingNextPage ? 'Loading…' : 'Load more'}
