@@ -55,7 +55,7 @@ the **zero-config default** — the system runs end-to-end with no secrets.
 **Prerequisites:** Docker, and (for host dev only) Node 24 LTS + pnpm 11.
 
 ```bash
-make up        # build + start the full stack (Postgres, api, worker, admin)
+make up        # build + start the full stack: Postgres, api, worker (api serves the admin UI)
 ```
 
 Open **<http://localhost:3000>** — the api container serves the admin UI, REST, and SSE on
