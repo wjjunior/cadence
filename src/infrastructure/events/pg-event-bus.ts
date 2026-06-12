@@ -19,9 +19,7 @@ export class PgEventBus implements EventBus {
 
   constructor(private readonly sql: DbClient['sql']) {}
 
-  // postgres.js auto-reconnects this dedicated connection, so no reconnect path is needed (the
-  // reconnect-window gap is covered by the admin poll). The pending guard shares one LISTEN
-  // across concurrent start() calls instead of leaking a second connection.
+  // The pending guard shares one LISTEN across concurrent start() calls instead of leaking a second connection.
   async start(): Promise<void> {
     if (this.listener) return;
     if (this.starting) return this.starting;

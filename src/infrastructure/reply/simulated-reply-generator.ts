@@ -21,8 +21,7 @@ export class SimulatedReplyGenerator implements ReplyGenerator {
   }
 
   async generate(ctx: Parameters<ReplyGenerator['generate']>[0]): Promise<{ body: string }> {
-    // floor over an inclusive span is a uniform integer in [minMs, maxMs]; the
-    // clamp keeps it bound-safe if an injected random() ever returns exactly 1.
+    // Uniform integer in [minMs, maxMs]; the clamp stays bound-safe if random() ever returns exactly 1.
     const span = this.maxMs - this.minMs;
     const delayMs = this.minMs + Math.min(span, Math.floor(this.random() * (span + 1)));
     await this.sleep(delayMs);

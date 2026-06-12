@@ -7,8 +7,6 @@ export interface SseHandlers {
   onStatus: (status: SseStatus) => void;
 }
 
-// Thin wrapper over the browser EventSource: parses the conversation.changed
-// envelope and surfaces connection status for the reconnecting indicator.
 export function connectEvents(url: string, handlers: SseHandlers): () => void {
   const source = new EventSource(url);
   handlers.onStatus('connecting');

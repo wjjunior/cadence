@@ -9,8 +9,7 @@ import { asDrizzle } from '../db/tx.js';
 
 const UNIQUE_VIOLATION = '23505';
 const ONE_RUNNING_PER_CONVERSATION = 'one_running_per_conversation';
-// Safety backstop only: benign 23505 contention converges in 0–1 retries once the
-// winner commits and the FIFO predicate excludes our sibling.
+// Benign 23505 contention converges in 0–1 retries once the winner commits and the FIFO predicate excludes our sibling.
 const MAX_CLAIM_CONTENTION_RETRIES = 8;
 
 export function isBenignContention(error: unknown): boolean {
@@ -32,13 +31,10 @@ interface JobRow {
   created_at: string | Date;
 }
 
-// postgres.js returns timestamptz as a Date for plain selects but as a string in
-// this UPDATE … RETURNING path, so the boundary mapper normalizes to Date.
+// postgres.js returns timestamptz as a string on this UPDATE … RETURNING path, so normalize to Date.
 const toDate = (v: string | Date): Date => (v instanceof Date ? v : new Date(v));
 
-// Maps a raw postgres.js claim row (snake_case) to a Job — distinct from
-// db/mappers.ts toJob, which maps a Drizzle $inferSelect row. The status column
-// is CHECK-constrained in the schema, so the value is a valid JobStatus.
+// The status column is CHECK-constrained in the schema, so the cast to JobStatus is sound.
 function rowToJob(row: JobRow): Job {
   return {
     id: row.id,

@@ -8,8 +8,7 @@ export interface StatusBadgeSpec {
   pulse: boolean;
 }
 
-// Appendix A.3 status → badge mapping, kept pure so it is exhaustively unit-testable
-// and components carry no status logic.
+// status → badge mapping, kept pure so components carry no status logic.
 const statusBadges: Record<MessageStatus, StatusBadgeSpec> = {
   received: { label: 'received', variant: 'neutral', pulse: false },
   queued: { label: 'queued', variant: 'neutral', pulse: false },

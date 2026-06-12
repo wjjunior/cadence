@@ -9,8 +9,7 @@ interface SentMessage {
   providerSid: string;
 }
 
-// Twilio message SIDs are SM + 32 hex chars; deriving from the key (no stored map) makes a
-// resend with the same key return the same SID by construction.
+// Deriving the SID from the key (no stored map) makes a resend with the same key return the same SID.
 export function mockSid(idempotencyKey: string): string {
   return `SM${createHash('sha256').update(idempotencyKey).digest('hex').slice(0, 32)}`;
 }

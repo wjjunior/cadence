@@ -15,21 +15,15 @@ export type ServerDeps = ConversationRoutesDeps &
   EventRoutesDeps &
   HealthRoutesDeps &
   ConfigRoutesDeps & {
-    // Present only in mock mode; the simulate route is otherwise absent (not just disabled).
     simulate?: SimulateRoutesDeps | null;
     loggerInstance?: FastifyBaseLogger;
-    // Trust X-Forwarded-* so the Twilio signature URL reflects the external scheme/host
-    // (only behind a known proxy; off by default).
     trustProxy?: boolean;
-    // Absolute path to the built admin SPA; when set, the API also serves it (one-command stack).
     adminDir?: string;
   };
 
 const apiPrefixes = ['/api', '/dev', '/health', '/webhooks'] as const;
 
-// Serve the built SPA: real files (index.html, /assets/*) are served by @fastify/static; any other
-// GET that isn't an API path falls back to index.html so client-side routes (/c/:id) and refreshes
-// resolve. Unknown API paths stay a JSON 404, never the SPA HTML.
+// Static files serve directly; any other non-API GET falls back to index.html for client-side routes.
 function registerAdminSpa(app: FastifyInstance, adminDir: string): void {
   app.register(fastifyStatic, { root: adminDir, wildcard: false });
   app.setNotFoundHandler((request, reply) => {
@@ -43,9 +37,7 @@ function registerAdminSpa(app: FastifyInstance, adminDir: string): void {
 }
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
-  // SSE connections are long-lived and hijacked; without forceClose, app.close() would block on
-  // them forever (and their heartbeat intervals keep the event loop alive). Forcing them closed
-  // fires each connection's `close`, running the route teardown.
+  // Without forceClose, app.close() would block forever on the hijacked, long-lived SSE connections.
   const app = Fastify({
     forceCloseConnections: true,
     trustProxy: deps.trustProxy ?? false,

@@ -27,8 +27,7 @@ export class HeartbeatBeater {
     }
   }
 
-  // Self-rescheduling so a beat that outlasts the interval (transient DB slowness)
-  // can never overlap the next one (setInterval would).
+  // Self-rescheduling so a beat that outlasts the interval can never overlap the next (setInterval would).
   private scheduleNext(): void {
     if (this.stopped) return;
     this.timer = setTimeout(() => {

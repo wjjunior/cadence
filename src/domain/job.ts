@@ -26,8 +26,7 @@ export interface NewJob {
   conversationId: string;
 }
 
-// running -> pending serves both the backoff reschedule and the reaper returning an
-// abandoned (lease-expired) job to the claimable pool.
+// running -> pending serves both the backoff reschedule and the reaper returning a lease-expired job.
 const jobTransitions: Readonly<Record<JobStatus, readonly JobStatus[]>> = {
   [jobStatus.pending]: [jobStatus.running],
   [jobStatus.running]: [jobStatus.completed, jobStatus.failed, jobStatus.pending],

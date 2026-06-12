@@ -30,8 +30,7 @@ function normalizeE164(raw: string): string {
   return normalized;
 }
 
-// Equivalent but cosmetically different phone representations resolve to the
-// same conversation, backing the UNIQUE (user_phone, system_phone) upsert.
+// Cosmetically different phone representations resolve to the same conversation key.
 export function conversationKey(userPhone: string, systemPhone: string): ConversationKey {
   return {
     userPhone: normalizeE164(userPhone),

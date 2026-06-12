@@ -61,8 +61,7 @@ export class DrizzleMessageRepository implements MessageRepository {
   ): Promise<void> {
     await asDrizzle(tx)
       .update(messages)
-      // error_detail is only written when the caller passes it, so a happy-path status
-      // change does not wipe a previously recorded error.
+      // error_detail is written only when passed, so a happy-path status change doesn't wipe a prior error.
       .set(
         errorDetail === undefined
           ? { status, updatedAt: sql`now()` }
