@@ -13,6 +13,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    languageOptions: {
+      parserOptions: { tsconfigRootDir: import.meta.dirname },
+    },
+  },
+  {
     files: ['src/domain/**/*.ts'],
     rules: layerBoundary(
       ['**/application/**', '**/infrastructure/**', '**/http/**', '**/entrypoints/**'],
