@@ -12,6 +12,14 @@ history and live status.
 [![Fastify](https://img.shields.io/badge/Fastify-v5-000000?style=flat&logo=fastify&logoColor=white)](https://fastify.dev/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
 
+Built with:
+
+[![Claude Opus 4.8](https://img.shields.io/badge/Claude-Opus%204.8-D97757?style=flat&logo=anthropic&logoColor=white)](https://www.anthropic.com/claude)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-CLI-D97757?style=flat&logo=anthropic&logoColor=white)](https://claude.com/claude-code)
+[![Context7 MCP](https://img.shields.io/badge/Context7-MCP%20server-6C63FF?style=flat&logo=readthedocs&logoColor=white)](https://context7.com/)
+[![Notion](https://img.shields.io/badge/Notion-System%20Design-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/)
+[![Jira](https://img.shields.io/badge/Jira-CAD%20project-0052CC?style=flat&logo=jira&logoColor=white)](https://www.atlassian.com/software/jira)
+
 The design principle throughout: **boring, reliable technology with the fewest moving
 parts that satisfies the guarantees.** PostgreSQL is _both_ the system of record _and_ the
 durable job queue — no Redis, no broker, no second stateful system. The full reasoning is
