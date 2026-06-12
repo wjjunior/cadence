@@ -30,12 +30,12 @@ node_modules: package.json pnpm-lock.yaml
 	pnpm install
 	@touch node_modules
 
-up: node_modules ## Start the full stack (Postgres, api, worker) in containers
+up: ## Start the full stack (Postgres, api, worker) in containers
 	$(COMPOSE) up -d --wait
 	@echo ""
 	@echo "Stack up. Admin + API: $(API_URL)"
 
-up-build: node_modules ## Rebuild images, then start the full stack
+up-build: ## Rebuild images, then start the full stack
 	$(COMPOSE) up -d --build --wait
 	@echo ""
 	@echo "Stack up. Admin + API: $(API_URL)"
