@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { IngestInboundMessage } from '../application/ingest-inbound-message.js';
 import { GetConversationDetail } from '../application/use-cases/get-conversation-detail.js';
 import { ListConversations } from '../application/use-cases/list-conversations.js';
+import { SendOutboundMessage } from '../application/use-cases/send-outbound-message.js';
 import { loadConfig, smsProvider } from '../infrastructure/config.js';
 import { createDbClient } from '../infrastructure/db/client.js';
 import { DrizzleUnitOfWork } from '../infrastructure/db/unit-of-work.js';
@@ -16,8 +17,12 @@ import { DrizzleJobEnqueuer } from '../infrastructure/repositories/job-enqueuer.
 import { DrizzleMessageRepository } from '../infrastructure/repositories/message-repository.js';
 import { PgNotifier } from '../infrastructure/repositories/notifier.js';
 import { DrizzleWebhookEventRepository } from '../infrastructure/repositories/webhook-event-repository.js';
+import { createSmsProvider } from '../infrastructure/sms/create-sms-provider.js';
 import { TwilioSignatureVerifier } from '../infrastructure/sms/twilio-signature-verifier.js';
 import { buildServer } from '../http/server.js';
+
+// The system number outbound sends are addressed from; the Twilio number when set.
+const DEFAULT_SYSTEM_PHONE = '+10000000000';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -45,6 +50,16 @@ async function main(): Promise<void> {
         ? new TwilioSignatureVerifier(config.TWILIO_AUTH_TOKEN)
         : undefined;
 
+    const sendOutboundMessage = new SendOutboundMessage(
+      new DrizzleUnitOfWork(db),
+      conversations,
+      messages,
+      await createSmsProvider(config),
+      new PgNotifier(),
+      config.TWILIO_FROM_NUMBER ?? DEFAULT_SYSTEM_PHONE,
+      logger,
+    );
+
     // Serve the built admin when present (the image); absent in local tsx dev, where it runs via vite.
     const adminDir = fileURLToPath(new URL('../../admin/dist', import.meta.url));
     const adminReady = existsSync(join(adminDir, 'index.html'));
@@ -53,6 +68,7 @@ async function main(): Promise<void> {
       listConversations: new ListConversations(conversations),
       getConversationDetail: new GetConversationDetail(conversations, messages),
       ingestInboundMessage,
+      sendOutboundMessage,
       verifier,
       trustProxy: config.TRUST_PROXY,
       adminDir: adminReady ? adminDir : undefined,
