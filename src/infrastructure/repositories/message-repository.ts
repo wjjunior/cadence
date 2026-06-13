@@ -53,6 +53,27 @@ export class DrizzleMessageRepository implements MessageRepository {
     return toMessage(row);
   }
 
+  async insertOutboundIfNew(tx: Tx, input: NewOutboundMessage): Promise<Message | null> {
+    const [row] = await asDrizzle(tx)
+      .insert(messages)
+      .values({
+        conversationId: input.conversationId,
+        direction: messageDirection.outbound,
+        body: input.body,
+        status: outboundStatus.queued,
+        idempotencyKey: input.idempotencyKey,
+        inReplyTo: input.inReplyTo,
+        providerMessageSid: input.providerMessageSid,
+      })
+      // zero rows back is the duplicate signal, so a repeated key never re-sends.
+      .onConflictDoNothing({
+        target: messages.idempotencyKey,
+        where: sql`${messages.direction} = ${messageDirection.outbound}`,
+      })
+      .returning();
+    return row ? toMessage(row) : null;
+  }
+
   async markStatus(
     tx: Tx,
     id: string,

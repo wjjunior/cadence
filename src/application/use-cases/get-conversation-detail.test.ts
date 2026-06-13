@@ -42,6 +42,7 @@ const msgRepo = (m: Message[]): MessageRepository => ({
   listByConversation: () => Promise.resolve(m),
   insertInbound: () => Promise.reject(new Error('unused')),
   insertOutbound: () => Promise.reject(new Error('unused')),
+  insertOutboundIfNew: () => Promise.reject(new Error('unused')),
   markStatus: () => Promise.reject(new Error('unused')),
 });
 
